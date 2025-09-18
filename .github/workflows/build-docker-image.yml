@@ -40,8 +40,8 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           labels: |
-            org.opencontainers.image.title=pipeline-of-identification
-            org.opencontainers.image.description=Tools used in the pipeline-of-identification
+            org.opencontainers.image.title=mspepid
+            org.opencontainers.image.description=Tools used in the mspepid
             org.opencontainers.image.url=${{ github.event.repository.html_url }}
             org.opencontainers.image.source=${{ github.event.repository.html_url }}
           flavor: | # always generate latest tag
