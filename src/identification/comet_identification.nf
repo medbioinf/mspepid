@@ -1,15 +1,3 @@
-nextflow.enable.dsl=2
-
-params.comet_image = 'quay.io/medbioinf/comet-ms:v2024.01.0'
-
-// number of threads used by comet
-params.comet_threads = 16
-params.comet_mem = "8 GB"
-
-params.comet_psm_id_pattern = "(.*)"
-params.comet_spectrum_id_pattern = '.*scan=(\\d+)$'
-params.comet_scan_id_pattern = '^(?P<scan_id>\\d+)$'
-
 include {convert_and_enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
 include {psm_percolator; psm_percolator as ms2rescore_percolator; psm_percolator as oktoberfest_percolator} from '../postprocessing/percolator.nf'
 include {ms2rescore_workflow} from '../postprocessing/ms2rescore.nf'
@@ -51,7 +39,8 @@ workflow comet_identification {
 process adjust_comet_param_file {
     cpus 2
     memory "1 GB"
-    container { params.python_image }
+
+    label 'python_image'
 
     input:
     path comet_params_file
@@ -87,7 +76,8 @@ process adjust_comet_param_file {
 process identification_with_comet {
     cpus { params.comet_threads }
     memory { params.comet_mem }
-    container { params.comet_image }
+
+    label 'comet_image'
 
 	publishDir "${params.outdir}/comet", mode: 'copy'
 

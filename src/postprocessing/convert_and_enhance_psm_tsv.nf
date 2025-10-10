@@ -1,8 +1,3 @@
-nextflow.enable.dsl=2
-
-params.convert_psm_tsv_mem = "60 GB"
-params.enhance_psm_tsv_mem = "8 GB"
-
 /**
  * Executes postprocessing steps to enhance the psm_utils TSV and prepare the PIN files
  *
@@ -48,7 +43,8 @@ workflow enhance_psm_tsv {
 process convert_searchengine_to_psm_utils {
     cpus 2
     memory { params.convert_psm_tsv_mem }
-    container { params.python_image }
+
+    label 'python_image'
 
     input:
     path searchengine_results
@@ -66,7 +62,8 @@ process convert_searchengine_to_psm_utils {
 process convert_chunked_result_to_psm_utils {
     cpus 2
     memory { params.convert_psm_tsv_mem }
-    container { params.python_image }
+
+    label 'python_image'
 
     input:
     tuple val(original_mzml_basename), path(searchengine_results)
@@ -91,7 +88,8 @@ process convert_chunked_result_to_psm_utils {
 process enhance_psms_and_create_pin {
     cpus 2
     memory { params.enhance_psm_tsv_mem }
-    container { params.python_image }
+
+    label 'python_image'
 
 	publishDir "${params.outdir}/${searchengine}", mode: 'copy'
 

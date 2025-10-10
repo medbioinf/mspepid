@@ -1,15 +1,3 @@
-nextflow.enable.dsl=2
-
-params.msamanda_image = 'quay.io/medbioinf/msamanda:3.0.22.071'
-
-// number of threads used by msamanda
-params.msamanda_threads = 16
-params.msamanda_mem = "64 GB"
-
-params.msamanda_psm_id_pattern = "(.*)"
-params.msamanda_spectrum_id_pattern = '(.*)'
-params.msamanda_scan_id_pattern = '.*scan=(?P<scan_id>\\d+)$'
-
 include {convert_and_enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
 include {psm_percolator; psm_percolator as ms2rescore_percolator; psm_percolator as oktoberfest_percolator} from '../postprocessing/percolator.nf'
 include {ms2rescore_workflow} from '../postprocessing/ms2rescore.nf'
@@ -56,7 +44,8 @@ workflow msamanda_identification {
 process identification_with_msamanda {
     cpus { params.msamanda_threads }
     memory { params.msamanda_mem }
-    container { params.msamanda_image }
+
+    label 'msamanda_image'
 
     publishDir "${params.outdir}/msamanda", mode: 'copy'
 

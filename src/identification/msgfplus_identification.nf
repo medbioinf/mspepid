@@ -1,23 +1,3 @@
-nextflow.enable.dsl=2
-
-params.msgfplus_image = 'quay.io/medbioinf/msgfplus:v2024.03.26'
-params.mzidmerger_image = 'quay.io/medbioinf/mzid-merger:1.4.26'
-
-// params for MS-GF+
-params.msgfplus_threads = 6
-params.msgfplus_mem_gb = 16
-params.msgfplus_tasks = 0
-
-params.msgfplus_instrument = "1" // 0: Low-res LCQ/LTQ, 1: Orbitrap/FTICR/Lumos, 2: TOF, 3: Q-Exactive
-
-params.msgfplus_split_input = 10000     // split input mzMLs into chunks of this size, 0 to disable
-params.msgfplus_merge_mem_gb = 16       // memory for merging PSMs, used in merge_psms process
-params.msgfplus_split_fasta = 0         // split the fasta into this many chunks, 0 to disable
-
-params.msgfplus_psm_id_pattern = "(.*)"
-params.msgfplus_spectrum_id_pattern = '(.*)'
-params.msgfplus_scan_id_pattern = '.*scan=(?P<scan_id>\\d+)$'
-
 include {convert_chunked_result_to_psm_utils; enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
 include {psm_percolator; psm_percolator as ms2rescore_percolator; psm_percolator as oktoberfest_percolator} from '../postprocessing/percolator.nf'
 include {ms2rescore_workflow} from '../postprocessing/ms2rescore.nf'
@@ -103,7 +83,8 @@ workflow msgfplus_identification {
 process identification_with_msgfplus {
     cpus { params.msgfplus_threads }
     memory { params.msgfplus_mem_gb + " GB" }
-    container { params.msgfplus_image }
+
+    label 'msgfplus_image'
 
     publishDir "${params.outdir}/msgfplus", mode: 'copy', enabled: { publish_results }
 
@@ -136,7 +117,8 @@ process identification_with_msgfplus {
 process split_fasta {
     cpus 2
     memory "8 GB"
-    container { params.python_image }
+
+    label 'python_image'
 
     input:
     path fasta
@@ -154,7 +136,8 @@ process split_fasta {
 process build_msgfplus_index {
     cpus { params.msgfplus_threads }
     memory { params.msgfplus_mem_gb + " GB" }
-    container { params.msgfplus_image }
+
+    label 'msgfplus_image'
 
     input:
     path fasta
@@ -172,7 +155,8 @@ process build_msgfplus_index {
 process merge_psms {
     cpus 2
     memory { params.msgfplus_merge_mem_gb + " GB" }
-    container { params.python_image }
+
+    label 'python_image'
 
     input:
     tuple val(original_mzml_basename), path(psm_tsvs)
@@ -190,7 +174,8 @@ process merge_psms {
 process mzid_merger {
     cpus 2
     memory "8 GB"
-    container { params.mzidmerger_image }
+
+    label 'mzidmerger_image'
 
     publishDir "${params.outdir}/msgfplus", mode: 'copy'
 

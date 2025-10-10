@@ -1,0 +1,553 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/mpc-bioinformatics/McQuaC//nextflow_schema.json",
+  "title": "mpc-bioinformatics/McQuaC pipeline parameters",
+  "description": "A pipeline for the identification of peptides from mass spectrometry data, integrating multiple search engines and post-processing tools.",
+  "type": "object",
+  "$defs": {
+    "input_output_options": {
+      "title": "Input/output options",
+      "type": "object",
+      "fa_icon": "fas fa-terminal",
+      "description": "Define where the pipeline should find input data and save output data.",
+      "required": ["outdir", "raw_files"],
+      "properties": {
+        "outdir": {
+          "type": "string",
+          "format": "directory-path",
+          "description": "The output directory where the results will be saved. You have to use absolute paths to storage on Cloud infrastructure.",
+          "fa_icon": "fas fa-folder-open",
+          "default": "./"
+        },
+        "raw_files": {
+          "type": "string",
+          "description": "Path to the raw spectra files (either .raw or .d), can contain * to process multiple files",
+          "default": "./msms-files/*.raw"
+        },
+        "mzml_files": {
+          "type": "string",
+          "description": "If you already have conversions to mzML, specify them here. They need to have the same name basis as the raw spectrum files"
+        },
+        "fasta": {
+          "type": "string",
+          "description": "Path to the protein FASTA file to use, in UniProt header format.",
+          "format": "file-path",
+          "mimetype": "text/fasta",
+          "exists": true
+        },
+        "fasta_target_decoy": {
+          "type": "string",
+          "description": "If you already have a target-decoy protein FASTA from a previous run, it can be given here.",
+          "format": "file-path",
+          "mimetype": "text/fasta"
+        },
+        "decoy_database_threads": {
+          "type": "integer",
+          "default": 4,
+          "description": "Number of allowed threads / CPUs allowed for creation of target-decoy database"
+        },
+        "entrapment_fold": {
+          "type": "integer",
+          "default": 0,
+          "description": "This parameter specifies for an entrapment search the fold of entrapment proteins per target protein. No database will be created if 0."
+        },
+        "fdrbench_mem_gb": {
+          "type": "integer",
+          "default": 16,
+          "description": "Amount of allowed memory in GB for the creation of the entrapment database"
+        },
+        "keep_mzmls": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether the converted mzML files should be kept in the results folder."
+        },
+        "tdf2mzml_threads": {
+          "type": "integer",
+          "default": 8,
+          "description": "Number of allowed threads / CPUs for conversion of .d to mzML using tdf2mzml"
+        }
+      }
+    },
+    "general_search_parameters": {
+      "title": "General search parameters",
+      "type": "object",
+      "description": "",
+      "default": "",
+      "properties": {
+        "precursor_tol_ppm": {
+          "type": "integer",
+          "default": 10,
+          "description": "The precursor tolerance in PPM"
+        },
+        "fragment_tol_da": {
+          "type": "number",
+          "default": 0.02,
+          "description": "The fragment tolerance in Dalton"
+        },
+        "is_timstof": {
+          "type": "boolean",
+          "description": "Specify whether the data is timsTOF data"
+        },
+        "use_only_rank1_psms": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use only top identifications for any post processing. Otherwise, all identifications will be used."
+        },
+        "execute_msamanda": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to execute identification with MSAmanda"
+        },
+        "msamanda_config_file": {
+          "type": "string",
+          "default": "${projectDir}/config/msamanda_settings.xml",
+          "description": "Path to the MSAmanda params file for additional, search engine specific settings."
+        },
+        "execute_msfragger": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to execute identification with MS Fragger"
+        },
+        "msfragger_config_file": {
+          "type": "string",
+          "default": "${projectDir}/config/closed_fragger.params",
+          "description": "Path to the MS Fragger params file for additional, search engine specific settings."
+        },
+        "execute_msgfplus": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to execute identification with MS-GF+"
+        },
+        "msgfplus_params_file": {
+          "type": "string",
+          "default": "${projectDir}/config/MSGFPlus_Params.txt",
+          "description": "Path to the MS-GF+ params file for additional, search engine specific settings."
+        },
+        "execute_sage": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to execute identification with Sage"
+        },
+        "sage_config_file": {
+          "type": "string",
+          "default": "${projectDir}/config/sage_config.json",
+          "description": "Path to the Sage params file for additional, search engine specific settings."
+        },
+        "execute_xtandem": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to execute identification with X!Tandem"
+        },
+        "xtandem_config_file": {
+          "type": "string",
+          "default": "${projectDir}/config/xtandem_input.xml",
+          "description": "Path to the X!Tandem params file for additional, search engine specific settings."
+        }
+      }
+    },
+    "comet_parameters": {
+      "title": "Comet parameters",
+      "type": "object",
+      "description": "",
+      "default": "",
+      "properties": {
+        "execute_comet": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to execute identification with Comet"
+        },
+        "comet_params_file": {
+          "type": "string",
+          "default": "${projectDir}/config/comet.params",
+          "description": "Path to the Comet params file for additional, search engine specific settings."
+        },
+        "comet_threads": {
+          "type": "integer",
+          "default": 16,
+          "description": "Number of allowed threads / CPUs for Comet"
+        },
+        "comet_mem": {
+          "type": "string",
+          "default": "8.GB",
+          "description": "Amount of allowed memory for Comet"
+        },
+        "comet_psm_id_pattern": {
+          "type": "string",
+          "default": "(.*)",
+          "description": "Regular expression to parse the PSM ID for MS2Rescore"
+        },
+        "comet_spectrum_id_pattern": {
+          "type": "string",
+          "default": ".*scan=(\\\\d+)$",
+          "description": "Regular expression to parse the spectrum ID which is matched against the PSM ID for MS2Rescore"
+        },
+        "comet_scan_id_pattern": {
+          "type": "string",
+          "default": "^(?P<scan_id>\\\\d+)$",
+          "description": "Regular expression to parse the PSM ID for Oktoberfest"
+        }
+      }
+    },
+    "maxquant_parameters": {
+      "title": "MaxQuant parameters",
+      "type": "object",
+      "description": "",
+      "default": "",
+      "properties": {
+        "execute_maxquant": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to execute identification with MaxQuant"
+        },
+        "maxquant_params_file": {
+          "type": "string",
+          "default": "${projectDir}/config/mqpar.xml",
+          "description": "Path to the MaxQuant params file for additional, search engine specific settings."
+        },
+        "maxquant_threads": {
+          "type": "integer",
+          "default": 4,
+          "description": "Number of allowed threads / CPUs for MaxQuant"
+        },
+        "maxquant_mem": {
+          "type": "string",
+          "default": "32.GB",
+          "description": "Amount of allowed memory for MaxQuant"
+        },
+        "maxquant_psm_id_pattern": {
+          "type": "string",
+          "description": "Regular expression to parse the PSM ID for MS2Rescore"
+        },
+        "maxquant_spectrum_id_pattern": {
+          "type": "string",
+          "description": "Regular expression to parse the spectrum ID which is matched against the PSM ID for MS2Rescore"
+        },
+        "maxquant_scan_id_pattern": {
+          "type": "string",
+          "description": "Regular expression to parse the PSM ID for Oktoberfest"
+        }
+      }
+    },
+    "msamanda_parameters": {
+      "title": "MSAmanda parameters",
+      "type": "object",
+      "description": "",
+      "default": "",
+      "properties": {
+        "msamanda_threads": {
+          "type": "integer",
+          "default": 16,
+          "description": "Number of allowed threads / CPUs for MSAmanda"
+        },
+        "msamanda_mem": {
+          "type": "string",
+          "default": "64.GB",
+          "description": "Amount of allowed memory for MSAmanda"
+        },
+        "msamanda_psm_id_pattern": {
+          "type": "string",
+          "default": "(.*)",
+          "description": "Regular expression to parse the PSM ID for MS2Rescore"
+        },
+        "msamanda_spectrum_id_pattern": {
+          "type": "string",
+          "default": "(.*)",
+          "description": "Regular expression to parse the spectrum ID which is matched against the PSM ID for MS2Rescore"
+        },
+        "msamanda_scan_id_pattern": {
+          "type": "string",
+          "default": ".*scan=(?P<scan_id>\\\\d+)$",
+          "description": "Regular expression to parse the PSM ID for Oktoberfest"
+        }
+      }
+    },
+    "ms_fragger_parameters": {
+      "title": "MS Fragger parameters",
+      "type": "object",
+      "description": "",
+      "default": "",
+      "properties": {
+        "msfragger_threads": {
+          "type": "integer",
+          "default": 16,
+          "description": "Number of allowed threads / CPUs for MS Fragger"
+        },
+        "msfragger_mem_gb": {
+          "type": "integer",
+          "default": 16,
+          "description": "Amount of allowed memory in GB for MS Fragger"
+        },
+        "msfragger_db_split": {
+          "type": "integer",
+          "default": 0,
+          "description": "Number of splits for the sequence database to save memory. 0 means no split. You should set msfragger_calibrate to 0 for larger numbers."
+        },
+        "msfragger_calibrate": {
+          "type": "integer",
+          "default": 2,
+          "description": "Parameter \"calibrate_mass\" for MS Fragger. Perform mass calibration (0 for OFF, 1 for ON, 2 for ON and find optimal parameters, 4 for ON and find the optimal fragment mass tolerance)."
+        },
+        "msfragger_psm_id_pattern": {
+          "type": "string",
+          "default": "(.*)",
+          "description": "Regular expression to parse the PSM ID for MS2Rescore"
+        },
+        "msfragger_spectrum_id_pattern": {
+          "type": "string",
+          "default": "(.*)",
+          "description": "Regular expression to parse the spectrum ID which is matched against the PSM ID for MS2Rescore"
+        },
+        "msfragger_scan_id_pattern": {
+          "type": "string",
+          "default": ".*scan=(?P<scan_id>\\\\d+)$",
+          "description": "Regular expression to parse the PSM ID for Oktoberfest"
+        }
+      }
+    },
+    "ms_gf_parameters": {
+      "title": "MS-GF+ parameters",
+      "type": "object",
+      "description": "",
+      "default": "",
+      "properties": {
+        "msgfplus_threads": {
+          "type": "integer",
+          "default": 6,
+          "description": "Number of allowed threads / CPUs for MS-GF+"
+        },
+        "msgfplus_mem_gb": {
+          "type": "integer",
+          "default": 16,
+          "description": "Amount of allowed memory in GB for MS-GF+"
+        },
+        "msgfplus_tasks": {
+          "type": "integer",
+          "default": 0,
+          "description": "MS-GF+ parameter tasks. Please refer to the MS-GF+ documentation for more help."
+        },
+        "msgfplus_instrument": {
+          "type": "integer",
+          "default": 1,
+          "description": "0 means Low-res LCQ/LTQ (Default for CID and ETD); use InstrumentID=0 if analyzing a dataset with low-res CID and high-res HCD spectra; 1 means High-res LTQ (Default for HCD; also appropriate for high res CID); use InstrumentID=1 for Orbitrap, Lumos, and QEHFX instruments; 2 means TOF; 3 means Q-Exactive",
+          "minimum": 0,
+          "maximum": 3
+        },
+        "msgfplus_split_input": {
+          "type": "integer",
+          "default": 10000,
+          "description": "The input file will be split to the given number of MS2 spectra. Splitting greatly enhances speed and reduces memory consumption."
+        },
+        "msgfplus_merge_mem_gb": {
+          "type": "integer",
+          "default": 16,
+          "description": "Amount of allowed memory in GB to merge the results after a database split"
+        },
+        "msgfplus_split_fasta": {
+          "type": "integer",
+          "default": 0,
+          "description": "Number of splits for the sequence database to save memory and decrease the search time. 0 means no split."
+        },
+        "msgfplus_psm_id_pattern": {
+          "type": "string",
+          "default": "(.*)",
+          "description": "Regular expression to parse the PSM ID for MS2Rescore"
+        },
+        "msgfplus_spectrum_id_pattern": {
+          "type": "string",
+          "default": "(.*)",
+          "description": "Regular expression to parse the spectrum ID which is matched against the PSM ID for MS2Rescore"
+        },
+        "msgfplus_scan_id_pattern": {
+          "type": "string",
+          "default": ".*scan=(?P<scan_id>\\\\d+)$",
+          "description": "Regular expression to parse the PSM ID for Oktoberfest"
+        }
+      }
+    },
+    "new_group_2": {
+      "title": "New Group 2",
+      "type": "object",
+      "description": "",
+      "default": "",
+      "properties": {
+        "sage_threads": {
+          "type": "integer",
+          "default": 16,
+          "description": "Number of allowed threads / CPUs for Sage"
+        },
+        "sage_mem": {
+          "type": "string",
+          "default": "128.GB",
+          "description": "Amount of allowed memory for Sage"
+        },
+        "sage_prefilter": {
+          "type": "boolean",
+          "description": "Whether the database should be split during Sage search. This greatly reduces the memory consumption on when using large databases (beta feature)"
+        },
+        "sage_prefilter_chunk_size": {
+          "type": "integer",
+          "default": 0,
+          "description": "Number of proteins per database chunk when prefiltering is active."
+        },
+        "sage_psm_id_pattern": {
+          "type": "string",
+          "default": "(.*)",
+          "description": "Regular expression to parse the PSM ID for MS2Rescore"
+        },
+        "sage_spectrum_id_pattern": {
+          "type": "string",
+          "default": "(.*)",
+          "description": "Regular expression to parse the spectrum ID which is matched against the PSM ID for MS2Rescore"
+        },
+        "sage_scan_id_pattern": {
+          "type": "string",
+          "default": ".*scan=(?P<scan_id>\\\\d+)$",
+          "description": "Regular expression to parse the PSM ID for Oktoberfest"
+        }
+      }
+    },
+    "new_group_3": {
+      "title": "New Group 3",
+      "type": "object",
+      "description": "",
+      "default": "",
+      "properties": {
+        "xtandem_threads": {
+          "type": "integer",
+          "default": 16,
+          "description": "Number of allowed threads / CPUs for X!Tandem"
+        },
+        "xtandem_mem": {
+          "type": "string",
+          "default": "128.GB",
+          "description": "Amount of allowed memory for X!Tandem"
+        },
+        "xtandem_psm_id_pattern": {
+          "type": "string",
+          "default": "(.*)",
+          "description": "Regular expression to parse the PSM ID for MS2Rescore"
+        },
+        "xtandem_spectrum_id_pattern": {
+          "type": "string",
+          "default": "(.*)",
+          "description": "Regular expression to parse the spectrum ID which is matched against the PSM ID for MS2Rescore"
+        },
+        "xtandem_scan_id_pattern": {
+          "type": "string",
+          "default": ".*scan=(?P<scan_id>\\\\d+)$",
+          "description": "Regular expression to parse the PSM ID for Oktoberfest"
+        }
+      }
+    },
+    "new_group_1": {
+      "title": "New Group 1",
+      "type": "object",
+      "description": "",
+      "default": "",
+      "properties": {
+        "convert_psm_tsv_mem": {
+          "type": "string",
+          "default": "32.GB",
+          "description": "Amount of allowed memory for converting results into psm-utils format"
+        },
+        "enhance_psm_tsv_mem": {
+          "type": "string",
+          "default": "8.GB",
+          "description": "Amount of allowed memory for enhancing psm-utils results with additional information"
+        },
+        "ms2rescore_threads": {
+          "type": "integer",
+          "default": 4,
+          "description": "Number of allowed threads / CPUs for MS2Rescore"
+        },
+        "ms2rescore_mem": {
+          "type": "string",
+          "default": "64.GB",
+          "description": "Amount of allowed memory for MS2Rescore"
+        },
+        "ms2rescore_model": {
+          "type": "string",
+          "default": "HCD",
+          "description": "The model used for MS2Rescore"
+        },
+        "ms2rescore_chunk_size": {
+          "type": "integer",
+          "default": 100000,
+          "description": "Chunksize in PSMs that is processed per MS2Rescore instance. Reduce to decrease memory consumption."
+        },
+        "ms2pip_model_dir": {
+          "type": "string",
+          "default": "./ms2pip-model",
+          "description": "Path to store the MS2Pip model"
+        },
+        "oktoberfest_memory": {
+          "type": "string",
+          "default": "64.GB",
+          "description": "Amount of allowed memory for Oktoberfest feature generation"
+        },
+        "oktoberfest_to_pin_memory": {
+          "type": "string",
+          "default": "4.GB",
+          "description": "Amount of allowed memory for Oktoberfest conversion to PIN"
+        },
+        "oktoberfest_intensity_model": {
+          "type": "string",
+          "default": "Prosit_2020_intensity_HCD",
+          "description": "The intensity model used by Oktoberfest"
+        },
+        "oktoberfest_irt_model": {
+          "type": "string",
+          "default": "Prosit_2019_irt",
+          "description": "The iRT model used by Oktoberfest"
+        },
+        "oktoberfest_forks": {
+          "type": "integer",
+          "default": 1,
+          "description": "Number of forks / parallel instances allowed for Oktoberfest"
+        },
+        "percolator_threads": {
+          "type": "integer",
+          "default": 4,
+          "description": "Number of allowed threads / CPUs for Percolator"
+        },
+        "percolator_mem": {
+          "type": "string",
+          "default": "4.GB",
+          "description": "Amount of allowed memory to run Percolator"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "$ref": "#/$defs/input_output_options"
+    },
+    {
+      "$ref": "#/$defs/general_search_parameters"
+    },
+    {
+      "$ref": "#/$defs/comet_parameters"
+    },
+    {
+      "$ref": "#/$defs/maxquant_parameters"
+    },
+    {
+      "$ref": "#/$defs/msamanda_parameters"
+    },
+    {
+      "$ref": "#/$defs/ms_fragger_parameters"
+    },
+    {
+      "$ref": "#/$defs/ms_gf_parameters"
+    },
+    {
+      "$ref": "#/$defs/new_group_2"
+    },
+    {
+      "$ref": "#/$defs/new_group_3"
+    },
+    {
+      "$ref": "#/$defs/new_group_1"
+    }
+  ]
+}

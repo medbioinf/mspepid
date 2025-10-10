@@ -1,17 +1,3 @@
-nextflow.enable.dsl=2
-
-params.msfragger_image = 'medbioinf/msfragger'
-
-// parameters for MSFragger
-params.msfragger_threads = 16
-params.msfragger_mem_gb = 16
-params.msfragger_db_split = 0
-params.msfragger_calibrate = 2
-
-params.msfragger_psm_id_pattern = "(.*)"
-params.msfragger_spectrum_id_pattern = "(.*)"
-params.msfragger_scan_id_pattern = '.*scan=(?P<scan_id>\\d+)$'
-
 include {convert_and_enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
 include {psm_percolator; psm_percolator as ms2rescore_percolator; psm_percolator as oktoberfest_percolator} from '../postprocessing/percolator.nf'
 include {ms2rescore_workflow} from '../postprocessing/ms2rescore.nf'
@@ -50,7 +36,8 @@ workflow msfragger_identification {
 process adjust_msfragger_param_file {
     cpus 2
     memory "1 GB"
-    container { params.python_image }
+
+    label 'python_image'
 
     input:
     path fragger_params_file
@@ -89,7 +76,8 @@ process adjust_msfragger_param_file {
 process identification_with_msfragger {
     cpus { params.msfragger_threads }
     memory { params.msfragger_mem_gb + " GB" }
-    container { params.msfragger_image }
+
+    label 'msfragger_image'
     
     publishDir "${params.outdir}/msfragger", mode: 'copy'
 

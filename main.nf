@@ -2,43 +2,6 @@
 // Nextflow pipeline for peptide identification with multiple search engines and post-processing tools
 //
 
-// default python image
-params.python_image = 'ghcr.io/medbioinf/pipeline-of-identification:latest'
-params.oktoberfest_image = 'medbioinf/oktoberfest'
-
-// parameters set by the command line
-params.raw_files = ''
-params.mzml_files = ''    // may contain globs
-params.fasta = ''
-params.fasta_target_decoy = ''
-params.precursor_tol_ppm = 10
-params.fragment_tol_da = 0.02
-params.is_timstof = false
-params.entrapment_fold = 0
-params.use_only_rank1_psms = true
-
-// keep the (converted) mzML files
-params.keep_mzmls = true
-
-// should the search engines be executed?
-params.execute_comet = true
-params.execute_maxquant = true
-params.execute_msamanda = true
-params.execute_msfragger = true
-params.execute_msgfplus = true
-params.execute_sage = true
-params.execute_xtandem = true
-
-// default parameter files
-params.outdir = './'
-params.comet_params_file = "${baseDir}/config/comet.params"
-params.maxquant_params_file = "${baseDir}/config/mqpar.xml"
-params.msamanda_config_file = "${baseDir}/config/msamanda_settings.xml"
-params.msfragger_config_file = "${baseDir}/config/closed_fragger.params"
-params.msgfplus_params_file = "${baseDir}/config/MSGFPlus_Params.txt"
-params.sage_config_file = "${baseDir}/config/sage_config.json"
-params.xtandem_config_file = "${baseDir}/config/xtandem_input.xml"
-
 // including modules
 include {create_entrapment_database} from "./src/preprocess/create_entrapment_database.nf"
 include {create_decoy_database} from "./src/preprocess/create_decoy_database.nf"

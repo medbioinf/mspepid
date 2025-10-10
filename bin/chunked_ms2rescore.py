@@ -16,7 +16,7 @@ def argparse_setup():
     parser.add_argument("-spectra", help="Corresponding mzML file or .d path for PSMs file", required=True, type=str)
 
     parser.add_argument("-model", help="Model for MS2PIP", default="HCD", type=str)
-    parser.add_argument("-model_dir", help="Directory to store/find MS2PIP model", default="/mnt/data/ms2pip-model", type=str)
+    parser.add_argument("-model_dir", help="Directory to store/find MS2PIP model", default="./ms2pip-model", type=str)
     parser.add_argument("-ms2_tolerance", help="The MS2/fragment tolerance", default=0.02, type=float)
     parser.add_argument("-spectrum_id_pattern", help="The spectrum ID pattern to correspond PSMs to spectra", default="(.*)", type=str)
     parser.add_argument("-processes", help="Number of processes / threads to use", default=8, type=int)

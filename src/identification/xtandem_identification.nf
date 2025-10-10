@@ -1,15 +1,3 @@
-nextflow.enable.dsl=2
-
-params.xtandem_image = 'quay.io/medbioinf/xtandem:2017.2.1.4'
-
-// number of threads used by xtandem
-params.xtandem_threads = 16
-params.xtandem_mem = "128 GB"
-
-params.xtandem_psm_id_pattern = "(.*)"
-params.xtandem_spectrum_id_pattern = '(.*)'
-params.xtandem_scan_id_pattern = '.*scan=(?P<scan_id>\\d+)$'
-
 include {convert_and_enhance_psm_tsv} from '../postprocessing/convert_and_enhance_psm_tsv.nf'
 include {psm_percolator; psm_percolator as ms2rescore_percolator; psm_percolator as oktoberfest_percolator} from '../postprocessing/percolator.nf'
 include {ms2rescore_workflow} from '../postprocessing/ms2rescore.nf'
@@ -60,7 +48,8 @@ workflow xtandem_identification {
 process create_xtandem_params_files_from_default {
     cpus 2
     memory "1 GB"
-    container { params.python_image }
+
+    label 'python_image'
 
     input:
     path xtandem_config_file
@@ -116,7 +105,8 @@ process create_xtandem_params_files_from_default {
 process identification_with_xtandem {
     cpus { params.xtandem_threads }
     memory { params.xtandem_mem }
-    container { params.xtandem_image }
+
+    label 'xtandem_image'
     
     publishDir "${params.outdir}/xtandem", mode: 'copy'
 

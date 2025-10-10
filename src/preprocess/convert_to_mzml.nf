@@ -1,9 +1,3 @@
-nextflow.enable.dsl=2
-
-params.msconvert_image = 'proteowizard/pwiz-skyline-i-agree-to-the-vendor-licenses:3.0.25073-842baef'
-params.tdf2mzml_image = 'quay.io/medbioinf/tdf2mzml:0.4'
-params.tdf2mzml_threads = 8
-
 workflow convert_to_mzml {
     take:
     input_path
@@ -23,7 +17,8 @@ workflow convert_to_mzml {
 process convert_thermo_raw {
     cpus 2
     memory "8 GB"
-    container { params.msconvert_image }
+
+    label 'msconvert_image'
 
 	publishDir "${params.outdir}/mzmls", mode: 'copy', enabled: params.keep_mzmls
 
@@ -42,7 +37,8 @@ process convert_thermo_raw {
 process convert_bruker_d {
     cpus { params.tdf2mzml_threads }
     memory "8 GB"
-    container { params.tdf2mzml_image }
+    
+    label 'tdf2mzml_image'
 
     input:
     path input_d
@@ -63,7 +59,8 @@ process convert_bruker_d {
 process adjust_mzML {
     cpus 2
     memory "8 GB"
-    container { params.msconvert_image }
+
+    label 'msconvert_image'
 
 	publishDir "${params.outdir}/mzmls", mode: 'copy', enabled: params.keep_mzmls
 
@@ -94,7 +91,8 @@ process adjust_mzML {
 process split_mzml_into_chunks {
     cpus 2
     memory "8 GB"
-    container { params.msconvert_image }
+
+    label 'msconvert_image'
 
     input:
     val chunksize
