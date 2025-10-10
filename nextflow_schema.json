@@ -140,7 +140,7 @@
         },
         "xtandem_config_file": {
           "type": "string",
-          "default": "/mnt/data/projects/pipeline-of-identification/config/xtandem_input.xml",
+          "default": "${projectDir}/config/xtandem_input.xml",
           "description": "Path to the X!Tandem params file for additional, search engine specific settings."
         }
       }
