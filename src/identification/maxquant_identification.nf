@@ -15,10 +15,33 @@ workflow maxquant_identification {
     raw_files
     mzmls
     precursor_tol_ppm
+    // maxquant-specific runtime / configuration values passed from main.nf
+    maxquant_psm_id_pattern
+    maxquant_spectrum_id_pattern
+    maxquant_scan_id_pattern
+    is_timstof
+    maxquant_threads
+    maxquant_mem
+    convert_psm_tsv_mem
+    enhance_psm_tsv_mem
+    use_only_rank1_psms
+    ms2pip_model_dir
+    ms2rescore_model
+    ms2rescore_threads
+    ms2rescore_mem
+    ms2rescore_chunk_size
+    oktoberfest_intensity_model
+    oktoberfest_irt_model
+    oktoberfest_memory
+    oktoberfest_to_pin_memory
+    oktoberfest_forks
+    percolator_threads
+    percolator_mem
+    outdir
 
     main:
     // for TimsTOF data, always process the .d path instead of the mzML files
-    if (params.is_timstof) {
+    if (is_timstof) {
         process_files = raw_files
     } else {
         process_files = mzmls
@@ -26,34 +49,34 @@ workflow maxquant_identification {
 
     maxquant_results = identification_with_maxquant(maxquant_params_file, fasta, process_files, precursor_tol_ppm)
 
-    psm_tsvs_and_pin = convert_and_enhance_psm_tsv(maxquant_results, 'msms', 'maxquant')
+    psm_tsvs_and_pin = convert_and_enhance_psm_tsv(maxquant_results, 'msms', 'maxquant', convert_psm_tsv_mem, enhance_psm_tsv_mem, outdir, use_only_rank1_psms)
     psm_tsvs = psm_tsvs_and_pin.psm_tsv
     pin_files = psm_tsvs_and_pin.pin_file
 
-    psm_percolator(pin_files, 'maxquant')
+    psm_percolator(pin_files, 'maxquant', percolator_threads, percolator_mem, outdir)
 
-    if (params.maxquant_psm_id_pattern) {
-        psm_id_pattern = params.maxquant_psm_id_pattern
+    if (maxquant_psm_id_pattern) {
+        psm_id_pattern = maxquant_psm_id_pattern
     } else {
         psm_id_pattern = "(.*)"
     }
-    if (params.maxquant_spectrum_id_pattern) {
-        spectrum_id_pattern = params.maxquant_spectrum_id_pattern
+    if (maxquant_spectrum_id_pattern) {
+        spectrum_id_pattern = maxquant_spectrum_id_pattern
     } else{
-        if (params.is_timstof) {
+        if (is_timstof) {
             spectrum_id_pattern = '(.*)'
         } else {
             spectrum_id_pattern = '.*scan=(\\d+)$'
         }
     }
-    if (params.maxquant_scan_id_pattern) {
-        scan_id_pattern = params.maxquant_scan_id_pattern
+    if (maxquant_scan_id_pattern) {
+        scan_id_pattern = maxquant_scan_id_pattern
     } else{
         // no difference between psm TSVs derived from Bruker and Thermo measurments
         scan_id_pattern = '(?P<scan_id>\\d+)'
     }
 
-    if (params.is_timstof) {
+    if (is_timstof) {
         // MS2Rescore takes the .d files
         psm_tsvs_and_spectrafiles = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('_msms')) + '.d'  ] }
 
@@ -64,22 +87,22 @@ workflow maxquant_identification {
         psm_tsvs_and_spectra_oktoberfest = psm_tsvs_and_spectrafiles
     }
 
-    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_spectrafiles, psm_tsvs.collect(), process_files.collect(), spectrum_id_pattern, 'maxquant')
-    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_spectra_oktoberfest, psm_tsvs.collect(), mzmls.collect(), scan_id_pattern, 'maxquant')
+    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_spectrafiles, psm_tsvs.collect(), process_files.collect(), spectrum_id_pattern, 'maxquant', ms2pip_model_dir, ms2rescore_model, ms2rescore_threads, ms2rescore_mem, ms2rescore_chunk_size, outdir)
+    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_spectra_oktoberfest, psm_tsvs.collect(), mzmls.collect(), scan_id_pattern, 'maxquant', fragment_tol_da, oktoberfest_intensity_model, oktoberfest_irt_model, oktoberfest_memory, oktoberfest_to_pin_memory, oktoberfest_forks, outdir)
     
     // perform percolation
-    ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'maxquant')
-    oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'maxquant')
+    ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'maxquant', percolator_threads, percolator_mem, outdir)
+    oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'maxquant', percolator_threads, percolator_mem, outdir)
 }
 
 
 process identification_with_maxquant {
-    cpus { params.maxquant_threads }
-    memory { params.maxquant_mem }
+    cpus { maxquant_threads }
+    memory { maxquant_mem }
 
     label 'maxquant_image'
 
-    publishDir "${params.outdir}/maxquant", mode: 'copy'
+    publishDir "${outdir}/maxquant", mode: 'copy'
 
     stageInMode 'copy'  // MaxQuant respectively Mono does not support symlinks
 
@@ -93,7 +116,7 @@ process identification_with_maxquant {
     path "${mzmls.baseName}_msms.txt"
 
     script:
-    if (params.is_timstof) {
+    if (is_timstof) {
         maxquant_quantmode = 2
         maxquant_msinstrument = 4
         maxquant_usems1centroids = 'False'
@@ -148,7 +171,7 @@ process identification_with_maxquant {
 
     sed -i "s;<quantMode>[^<]*</quantMode>;<quantMode>${maxquant_quantmode}</quantMode>;" mqpar_adjusted.xml
 
-    sed -i "s;<numThreads>[^<]*</numThreads>;<numThreads>${params.maxquant_threads}</numThreads>;" mqpar_adjusted.xml
+    sed -i "s;<numThreads>[^<]*</numThreads>;<numThreads>${maxquant_threads}</numThreads>;" mqpar_adjusted.xml
 
     sed -i "s;<msInstrument>[^<]*</msInstrument>;<msInstrument>${maxquant_msinstrument}</msInstrument>;" mqpar_adjusted.xml
     sed -i "s;<useMs1Centroids>[^<]*</useMs1Centroids>;<useMs1Centroids>${maxquant_usems1centroids}</useMs1Centroids>;" mqpar_adjusted.xml
@@ -165,7 +188,7 @@ process identification_with_maxquant {
     sed -i "s;<isotopeMatchTol>[^<]*</isotopeMatchTol>;<isotopeMatchTol>${maxquant_isotopematchtol}</isotopeMatchTol>;" mqpar_adjusted.xml
     sed -i "s;<isotopeMatchTolInPpm>[^<]*</isotopeMatchTolInPpm>;<isotopeMatchTolInPpm>${maxquant_isotopematchtolinppm}</isotopeMatchTolInPpm>;" mqpar_adjusted.xml
     sed -i "s;<checkMassDeficit>[^<]*</checkMassDeficit>;<checkMassDeficit>${maxquant_checkmassdeficit}</checkMassDeficit>;" mqpar_adjusted.xml
-    sed -i "s;<intensityDependentCalibration>[^<]*</intensityDependentCalibration>;<intensityDependentCalibration>${maxquant_intensitydependentcalibration}</intensityDependentCalibration>;" mqpar_adjusted.xml
+    sed -i "s;<intensityDependentCalibration>[^<]*</intensityDependentCalibration>;<intensityDependentCalibration>${maxquant_intensitydependentcalibration}</intensityDependentcalibration>;" mqpar_adjusted.xml
     sed -i "s;<minScoreForCalibration>[^<]*</minScoreForCalibration>;<minScoreForCalibration>${maxquant_minscoreforcalibration}</minScoreForCalibration>;" mqpar_adjusted.xml
     sed -i "s;<timsHalfWidth>[^<]*</timsHalfWidth>;<timsHalfWidth>${maxquant_timshalfwidth}</timsHalfWidth>;" mqpar_adjusted.xml
     sed -i "s;<timsStep>[^<]*</timsStep>;<timsStep>${maxquant_timsstep}</timsStep>;" mqpar_adjusted.xml

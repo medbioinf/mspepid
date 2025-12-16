@@ -15,10 +15,17 @@ workflow oktoberfest_rescore_workflow {
     mzmls
     scan_id_regex
     searchengine
+    fragment_tol_da
+    oktoberfest_intensity_model
+    oktoberfest_irt_model
+    oktoberfest_memory
+    oktoberfest_to_pin_memory
+    oktoberfest_forks
+    outdir
 
     main:
-    oktoberfest_features = run_oktoberfest_feature_gen(psm_tsvs_and_mzmls, psm_tsvs, mzmls, params.fragment_tol_da, scan_id_regex)
-    oktoberfest_pins = oktoberfest_features_to_pin(oktoberfest_features, searchengine)
+    oktoberfest_features = run_oktoberfest_feature_gen(psm_tsvs_and_mzmls, psm_tsvs, mzmls, fragment_tol_da, scan_id_regex, oktoberfest_intensity_model, oktoberfest_irt_model, oktoberfest_memory, oktoberfest_forks)
+    oktoberfest_pins = oktoberfest_features_to_pin(oktoberfest_features, searchengine, oktoberfest_to_pin_memory, outdir)
 
 
     emit:
@@ -36,8 +43,8 @@ workflow oktoberfest_rescore_workflow {
  */
 process run_oktoberfest_feature_gen {
     cpus 1
-    maxForks params.oktoberfest_forks
-    memory { params.oktoberfest_memory }
+    maxForks { oktoberfest_forks }
+    memory { oktoberfest_memory }
 
     label 'oktoberfest_image'
 
@@ -47,6 +54,9 @@ process run_oktoberfest_feature_gen {
     path mzmls
     val fragment_tol_da
     val scan_id_regex
+    val oktoberfest_intensity_model
+    val oktoberfest_irt_model
+    
     
     output:
     path "${psm_utils_tsvs}.features.tsv"
@@ -57,8 +67,8 @@ process run_oktoberfest_feature_gen {
         -out-folder ./oktoberfest_out \
         -psms-file ${psm_utils_tsvs} \
         -spectra-file ${mzml_for_psms} \
-        -intensity-model ${params.oktoberfest_intensity_model} \
-        -irt-model ${params.oktoberfest_irt_model} \
+        -intensity-model ${oktoberfest_intensity_model} \
+        -irt-model ${oktoberfest_irt_model} \
         -mass-tolerance ${fragment_tol_da} \
         -mass-tolerance-unit da \
         -scan-id-regex '${scan_id_regex}' \
@@ -77,15 +87,17 @@ process run_oktoberfest_feature_gen {
  */
 process oktoberfest_features_to_pin {
     cpus 1
-    memory { params.oktoberfest_to_pin_memory }
+    memory { oktoberfest_to_pin_memory }
 
     label 'oktoberfest_image'
 
-	publishDir "${params.outdir}/${searchengine}", mode: 'copy'
+	publishDir "${outdir}/${searchengine}", mode: 'copy'
 
     input:
     path okt_features_tsv
     val searchengine
+    val oktoberfest_to_pin_memory
+    val outdir
 
     output:
     path "${okt_features_tsv.baseName}.oktoberfest.pin"

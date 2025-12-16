@@ -22,7 +22,7 @@
         "raw_files": {
           "type": "string",
           "description": "Path to the raw spectra files (either .raw or .d), can contain * to process multiple files",
-          "default": "./msms-files/*.raw"
+          "default": "../../datasets/mspepid_data/ISAs/EXII07043std.raw"
         },
         "mzml_files": {
           "type": "string",
@@ -33,7 +33,8 @@
           "description": "Path to the protein FASTA file to use, in UniProt header format.",
           "format": "file-path",
           "mimetype": "text/fasta",
-          "exists": true
+          "exists": true,
+          "default": "../../datasets/mspepid_data/uniprot_UP000005640_human_isos-uni_conts-2025_01.fasta"
         },
         "fasta_target_decoy": {
           "type": "string",
@@ -45,6 +46,11 @@
           "type": "integer",
           "default": 4,
           "description": "Number of allowed threads / CPUs allowed for creation of target-decoy database"
+        },
+        "decoy_method": {
+          "type": "string",
+          "default": "reverse",
+          "description": "The method used for decoy generation"
         },
         "entrapment_fold": {
           "type": "integer",
@@ -100,7 +106,7 @@
         },
         "msamanda_config_file": {
           "type": "string",
-          "default": "${projectDir}/config/msamanda_settings.xml",
+          "default": "./config/msamanda_settings.xml",
           "description": "Path to the MSAmanda params file for additional, search engine specific settings."
         },
         "execute_msfragger": {
@@ -110,7 +116,7 @@
         },
         "msfragger_config_file": {
           "type": "string",
-          "default": "${projectDir}/config/closed_fragger.params",
+          "default": "./config/closed_fragger.params",
           "description": "Path to the MS Fragger params file for additional, search engine specific settings."
         },
         "execute_msgfplus": {
@@ -120,7 +126,7 @@
         },
         "msgfplus_params_file": {
           "type": "string",
-          "default": "${projectDir}/config/MSGFPlus_Params.txt",
+          "default": "./config/MSGFPlus_Params.txt",
           "description": "Path to the MS-GF+ params file for additional, search engine specific settings."
         },
         "execute_sage": {
@@ -130,7 +136,7 @@
         },
         "sage_config_file": {
           "type": "string",
-          "default": "${projectDir}/config/sage_config.json",
+          "default": "./config/sage_config.json",
           "description": "Path to the Sage params file for additional, search engine specific settings."
         },
         "execute_xtandem": {
@@ -140,7 +146,7 @@
         },
         "xtandem_config_file": {
           "type": "string",
-          "default": "${projectDir}/config/xtandem_input.xml",
+          "default": "./config/xtandem_input.xml",
           "description": "Path to the X!Tandem params file for additional, search engine specific settings."
         }
       }
@@ -158,7 +164,7 @@
         },
         "comet_params_file": {
           "type": "string",
-          "default": "${projectDir}/config/comet.params",
+          "default": "./config/comet.params",
           "description": "Path to the Comet params file for additional, search engine specific settings."
         },
         "comet_threads": {
@@ -201,7 +207,7 @@
         },
         "maxquant_params_file": {
           "type": "string",
-          "default": "${projectDir}/config/mqpar.xml",
+          "default": "./config/mqpar.xml",
           "description": "Path to the MaxQuant params file for additional, search engine specific settings."
         },
         "maxquant_threads": {
@@ -342,6 +348,11 @@
           "default": 16,
           "description": "Amount of allowed memory in GB to merge the results after a database split"
         },
+        "msgfplus_mzid_mem_gb": {
+          "type": "integer",
+          "default": 8,
+          "description": "Amount of allowed memory in GB to merge the results after mzID conversion"
+        },
         "msgfplus_split_fasta": {
           "type": "integer",
           "default": 0,
@@ -364,8 +375,8 @@
         }
       }
     },
-    "new_group_2": {
-      "title": "New Group 2",
+    "sage_parameters": {
+      "title": "Sage parameters",
       "type": "object",
       "description": "",
       "default": "",
@@ -377,7 +388,7 @@
         },
         "sage_mem": {
           "type": "string",
-          "default": "128.GB",
+          "default": "64.GB",
           "description": "Amount of allowed memory for Sage"
         },
         "sage_prefilter": {
@@ -406,8 +417,8 @@
         }
       }
     },
-    "new_group_3": {
-      "title": "New Group 3",
+    "xtandem_parameters": {
+      "title": "xTandem parameters",
       "type": "object",
       "description": "",
       "default": "",
@@ -419,7 +430,7 @@
         },
         "xtandem_mem": {
           "type": "string",
-          "default": "128.GB",
+          "default": "64.GB",
           "description": "Amount of allowed memory for X!Tandem"
         },
         "xtandem_psm_id_pattern": {
@@ -439,8 +450,8 @@
         }
       }
     },
-    "new_group_1": {
-      "title": "New Group 1",
+    "postprocessing_parameters": {
+      "title": "Postprocessing parameters",
       "type": "object",
       "description": "",
       "default": "",
@@ -541,13 +552,13 @@
       "$ref": "#/$defs/ms_gf_parameters"
     },
     {
-      "$ref": "#/$defs/new_group_2"
+      "$ref": "#/$defs/sage_parameters"
     },
     {
-      "$ref": "#/$defs/new_group_3"
+      "$ref": "#/$defs/xtandem_parameters"
     },
     {
-      "$ref": "#/$defs/new_group_1"
+      "$ref": "#/$defs/postprocessing_parameters"
     }
   ]
 }

@@ -7,6 +7,7 @@ workflow create_decoy_database {
     take:
     fasta
     decoy_method
+    decoy_database_threads
 
     main:
     decoy_fasta = call_decoy_database(fasta, decoy_method)
@@ -17,7 +18,7 @@ workflow create_decoy_database {
 
 
 process call_decoy_database {
-    cpus { params.decoy_database_threads }
+    cpus { decoy_database_threads }
     memory '8.GB'
 
     label 'openms_image'
@@ -31,6 +32,6 @@ process call_decoy_database {
 
     script:
     """
-    DecoyDatabase -in ${fasta} -out ${fasta.baseName}-rev_decoy.fasta -decoy_string 'DECOY_' -method ${decoy_method} -threads ${params.decoy_database_threads}
+    DecoyDatabase -in ${fasta} -out ${fasta.baseName}-rev_decoy.fasta -decoy_string 'DECOY_' -method ${decoy_method} -threads ${decoy_database_threads}
     """
 }

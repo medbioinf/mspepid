@@ -15,6 +15,29 @@ workflow sage_identification {
     mzmls
     precursor_tol_ppm
     fragment_tol_da
+    // sage-specific runtime/configuration values passed from main.nf
+    sage_spectrum_id_pattern
+    sage_scan_id_pattern
+    sage_threads
+    sage_mem
+    sage_prefilter_chunk_size
+    sage_prefilter
+    convert_psm_tsv_mem
+    enhance_psm_tsv_mem
+    use_only_rank1_psms
+    ms2pip_model_dir
+    ms2rescore_model
+    ms2rescore_threads
+    ms2rescore_mem
+    ms2rescore_chunk_size
+    oktoberfest_intensity_model
+    oktoberfest_irt_model
+    oktoberfest_memory
+    oktoberfest_to_pin_memory
+    oktoberfest_forks
+    percolator_threads
+    percolator_mem
+    outdir
 
     main:
     sage_config_file = adjust_sage_config(default_config_file, precursor_tol_ppm, fragment_tol_da)
@@ -23,19 +46,19 @@ workflow sage_identification {
     sage_results = identification_with_sage(sage_config_file, fasta, mzmls.collect())
     separated_results = separate_sage_results(sage_results.sage_tsv)
 
-    psm_tsvs_and_pin = convert_and_enhance_psm_tsv(separated_results.sage_tsv.flatten(), 'sage_tsv', 'sage')
+    psm_tsvs_and_pin = convert_and_enhance_psm_tsv(separated_results.sage_tsv.flatten(), 'sage_tsv', 'sage', convert_psm_tsv_mem, enhance_psm_tsv_mem, outdir, use_only_rank1_psms)
     psm_tsvs = psm_tsvs_and_pin.psm_tsv
     pin_files = psm_tsvs_and_pin.pin_file
 
-    psm_percolator(pin_files, 'sage')
+    psm_percolator(pin_files, 'sage', percolator_threads, percolator_mem, outdir)
 
     psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.sage')) ] }
-    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.sage_spectrum_id_pattern, 'sage')
-    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.sage_scan_id_pattern, 'sage')
+    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), sage_spectrum_id_pattern, 'sage', ms2pip_model_dir, ms2rescore_model, ms2rescore_threads, ms2rescore_mem, ms2rescore_chunk_size, outdir)
+    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), sage_scan_id_pattern, 'sage', fragment_tol_da, oktoberfest_intensity_model, oktoberfest_irt_model, oktoberfest_memory, oktoberfest_to_pin_memory, oktoberfest_forks, outdir)
 
     // perform percolation
-    ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'sage')
-    oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'sage')
+    ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'sage', percolator_threads, percolator_mem, outdir)
+    oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'sage', percolator_threads, percolator_mem, outdir)
 }
 
 
@@ -68,8 +91,8 @@ json_object["precursor_tol"] = {'ppm': [-${precursor_tol_ppm}, ${precursor_tol_p
 json_object["fragment_tol"] = {'da': [-${fragment_tol_da}, ${fragment_tol_da}]}
 
 # adjust database prefilter
-json_object["database"]["prefilter_chunk_size"] = ${params.sage_prefilter_chunk_size}
-json_object["database"]["prefilter"] = (str("${params.sage_prefilter}").strip().lower() == "true")
+json_object["database"]["prefilter_chunk_size"] = ${sage_prefilter_chunk_size}
+json_object["database"]["prefilter"] = (str("${sage_prefilter}").strip().lower() == "true")
 json_object["database"]["prefilter_low_memory"] = False
 
 # Writing to sample.json
@@ -80,8 +103,8 @@ with open("./adjusted_sage_config.json", "w") as outfile:
 
 
 process identification_with_sage {
-    cpus { params.sage_threads }
-    memory { params.sage_mem }
+    cpus { sage_threads }
+    memory { sage_mem }
 
     label 'sage_image'
 
@@ -95,7 +118,7 @@ process identification_with_sage {
 
     script:
     """
-    RAYON_NUM_THREADS=${params.sage_threads} sage ${sage_config_file} -f ${fasta} --batch-size ${params.sage_threads} --write-pin --output_directory ./ ${mzmls}
+    RAYON_NUM_THREADS=${sage_threads} sage ${sage_config_file} -f ${fasta} --batch-size ${sage_threads} --write-pin --output_directory ./ ${mzmls}
     """
 }
 
@@ -106,7 +129,7 @@ process separate_sage_results {
 
     label 'python_image'
 
-    publishDir "${params.outdir}/sage", mode: 'copy'
+    publishDir "${outdir}/sage", mode: 'copy'
 
     input:
     path sage_tsv

@@ -1,6 +1,10 @@
+#!/usr/bin/env nextflow
 //
 // Nextflow pipeline for peptide identification with multiple search engines and post-processing tools
 //
+
+// import parameter validation function from nf-schema plugin
+include { validateParameters } from 'plugin/nf-schema'
 
 // including modules
 include {create_entrapment_database} from "./src/preprocess/create_entrapment_database.nf"
@@ -17,6 +21,10 @@ include {xtandem_identification} from "./src/identification/xtandem_identificati
 
 workflow {
     main:
+
+    // validate the parameters to the schema
+    // if they don't validate, workflow will be stopped and if not in the schema, a warning is issued
+	validateParameters()
 
     if (params.is_timstof && !params.raw_files) {
         error("TimsTOF data needs raw files specified!")
@@ -88,54 +96,254 @@ workflow {
 
     // TODO: convert raw files, if not given
     if (!params.mzml_files) {
-        mzmls = convert_to_mzml(raw_files)
+        mzmls = convert_to_mzml(raw_files, params.is_timstof, params.keep_mzmls, params.tdf2mzml_threads, params.outdir)
     }
 
     if (params.entrapment_fold > 0) {
         // create the entrapment database
-        fasta_target = create_entrapment_database(fasta_target, params.entrapment_fold)
+        fasta_target = create_entrapment_database(fasta_target, params.entrapment_fold, params.fdrbench_mem_gb)
     }
 
     // create the target-decoy-DB, if not given
     if (params.fasta_target_decoy) {
         fasta_target_decoy = Channel.fromPath(params.fasta_target_decoy).first()
     } else {
-        fasta_target_decoy = create_decoy_database(fasta_target, "reverse")
+        fasta_target_decoy = create_decoy_database(fasta_target, params.decoy_method, params.decoy_database_threads )
     }
 
     // run the search engines with post-processing
     if (params.execute_comet) {
         comet_params_file = Channel.fromPath(params.comet_params_file).first()
-        comet_identification(comet_params_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.fragment_tol_da)
+        // pass all comet-related params 
+        comet_identification(
+            comet_params_file,
+            fasta_target_decoy,
+            mzmls,
+            params.precursor_tol_ppm,
+            params.fragment_tol_da,
+            params.comet_threads,
+            params.comet_mem,
+            params.comet_spectrum_id_pattern,
+            params.comet_scan_id_pattern,
+            params.convert_psm_tsv_mem,
+            params.enhance_psm_tsv_mem,
+            params.use_only_rank1_psms,
+            params.ms2pip_model_dir,
+            params.ms2rescore_model,
+            params.ms2rescore_threads,
+            params.ms2rescore_mem,
+            params.ms2rescore_chunk_size,
+            params.oktoberfest_intensity_model,
+            params.oktoberfest_irt_model,
+            params.oktoberfest_memory,
+            params.oktoberfest_to_pin_memory,
+            params.oktoberfest_forks,
+            params.percolator_threads,
+            params.percolator_mem,
+            params.outdir
+        )
     }
 
     if (params.execute_maxquant) {
         maxquant_params_file = Channel.fromPath(params.maxquant_params_file).first()
-        maxquant_identification(maxquant_params_file, fasta_target, raw_files, mzmls, params.precursor_tol_ppm)
+        // pass all maxquant-specific params
+        maxquant_identification(
+            maxquant_params_file,
+            fasta_target,
+            raw_files,
+            mzmls,
+            params.precursor_tol_ppm,
+            params.maxquant_psm_id_pattern,
+            params.maxquant_spectrum_id_pattern,
+            params.maxquant_scan_id_pattern,
+            params.is_timstof,
+            params.maxquant_threads,
+            params.maxquant_mem,
+            params.convert_psm_tsv_mem,
+            params.enhance_psm_tsv_mem,
+            params.use_only_rank1_psms,
+            params.ms2pip_model_dir,
+            params.ms2rescore_model,
+            params.ms2rescore_threads,
+            params.ms2rescore_mem,
+            params.ms2rescore_chunk_size,
+            params.oktoberfest_intensity_model,
+            params.oktoberfest_irt_model,
+            params.oktoberfest_memory,
+            params.oktoberfest_to_pin_memory,
+            params.oktoberfest_forks,
+            params.percolator_threads,
+            params.percolator_mem,
+            params.outdir
+        )
     }
 
     if (params.execute_msamanda) {
         msamanda_config_file = Channel.fromPath(params.msamanda_config_file).first()
-        msamanda_identification(msamanda_config_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.fragment_tol_da)
+        // pass all msamanda-specific params
+        msamanda_identification(
+            msamanda_config_file,
+            fasta_target_decoy,
+            mzmls,
+            params.precursor_tol_ppm,
+            params.fragment_tol_da,
+            params.msamanda_threads,
+            params.msamanda_mem,
+            params.msamanda_spectrum_id_pattern,
+            params.msamanda_scan_id_pattern,
+            params.convert_psm_tsv_mem,
+            params.enhance_psm_tsv_mem,
+            params.use_only_rank1_psms,
+            params.ms2pip_model_dir,
+            params.ms2rescore_model,
+            params.ms2rescore_threads,
+            params.ms2rescore_mem,
+            params.ms2rescore_chunk_size,
+            params.oktoberfest_intensity_model,
+            params.oktoberfest_irt_model,
+            params.oktoberfest_memory,
+            params.oktoberfest_to_pin_memory,
+            params.oktoberfest_forks,
+            params.percolator_threads,
+            params.percolator_mem,
+            params.outdir
+        )
     }
 
     if (params.execute_msfragger) {
         msfragger_config_file = Channel.fromPath(params.msfragger_config_file).first()
-        msfragger_identification(msfragger_config_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.fragment_tol_da)
+        // pass all msfragger-specific params
+        msfragger_identification(
+            msfragger_config_file,
+            fasta_target_decoy,
+            mzmls,
+            params.precursor_tol_ppm,
+            params.fragment_tol_da,
+            params.msfragger_threads,
+            params.msfragger_mem_gb,
+            params.msfragger_spectrum_id_pattern,
+            params.msfragger_scan_id_pattern,
+            params.msfragger_db_split,
+            params.msfragger_calibrate,
+            params.convert_psm_tsv_mem,
+            params.enhance_psm_tsv_mem,
+            params.use_only_rank1_psms,
+            params.ms2pip_model_dir,
+            params.ms2rescore_model,
+            params.ms2rescore_threads,
+            params.ms2rescore_mem,
+            params.ms2rescore_chunk_size,
+            params.oktoberfest_intensity_model,
+            params.oktoberfest_irt_model,
+            params.oktoberfest_memory,
+            params.oktoberfest_to_pin_memory,
+            params.oktoberfest_forks,
+            params.percolator_threads,
+            params.percolator_mem,
+            params.outdir
+        )
     }
 
     if (params.execute_msgfplus) {
         msgfplus_params_file = Channel.fromPath(params.msgfplus_params_file).first()
-        msgfplus_identification(msgfplus_params_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm)
+        // pass all msgfplus-specific params
+        msgfplus_identification(
+            msgfplus_params_file,
+            fasta_target_decoy,
+            mzmls,
+            params.precursor_tol_ppm,
+            params.msgfplus_split_fasta,
+            params.msgfplus_split_input,
+            params.msgfplus_spectrum_id_pattern,
+            params.msgfplus_scan_id_pattern,
+            params.msgfplus_threads,
+            params.msgfplus_mem_gb,
+            params.msgfplus_instrument,
+            params.msgfplus_tasks,
+            params.msgfplus_merge_mem_gb,
+            params.msgfplus_mzid_mem_gb,
+            params.convert_psm_tsv_mem,
+            params.enhance_psm_tsv_mem,
+            params.use_only_rank1_psms,
+            params.ms2pip_model_dir,
+            params.ms2rescore_model,
+            params.ms2rescore_threads,
+            params.ms2rescore_mem,
+            params.ms2rescore_chunk_size,
+            params.oktoberfest_intensity_model,
+            params.oktoberfest_irt_model,
+            params.oktoberfest_memory,
+            params.oktoberfest_to_pin_memory,
+            params.oktoberfest_forks,
+            params.percolator_threads,
+            params.percolator_mem,
+            params.outdir
+        )
     }
 
     if (params.execute_sage) {
         sage_config_file = Channel.fromPath(params.sage_config_file).first()
-        sage_identification(sage_config_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.fragment_tol_da)
+        // pass all sage-specific params
+        sage_identification(
+            sage_config_file,
+            fasta_target_decoy,
+            mzmls,
+            params.precursor_tol_ppm,
+            params.fragment_tol_da,
+            params.sage_spectrum_id_pattern,
+            params.sage_scan_id_pattern,
+            params.sage_threads,
+            params.sage_mem,
+            params.sage_prefilter_chunk_size,
+            params.sage_prefilter,
+            params.convert_psm_tsv_mem,
+            params.enhance_psm_tsv_mem,
+            params.use_only_rank1_psms,
+            params.ms2pip_model_dir,
+            params.ms2rescore_model,
+            params.ms2rescore_threads,
+            params.ms2rescore_mem,
+            params.ms2rescore_chunk_size,
+            params.oktoberfest_intensity_model,
+            params.oktoberfest_irt_model,
+            params.oktoberfest_memory,
+            params.oktoberfest_to_pin_memory,
+            params.oktoberfest_forks,
+            params.percolator_threads,
+            params.percolator_mem,
+            params.outdir
+        )
     }
 
     if (params.execute_xtandem) {
         xtandem_config_file = Channel.fromPath(params.xtandem_config_file).first()
-        xtandem_identification(xtandem_config_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.fragment_tol_da)
+        // pass all xtandem-specific params
+        xtandem_identification(
+            xtandem_config_file,
+            fasta_target_decoy,
+            mzmls,
+            params.precursor_tol_ppm,
+            params.fragment_tol_da,
+            params.xtandem_spectrum_id_pattern,
+            params.xtandem_scan_id_pattern,
+            params.xtandem_threads,
+            params.xtandem_mem,
+            params.convert_psm_tsv_mem,
+            params.enhance_psm_tsv_mem,
+            params.use_only_rank1_psms,
+            params.ms2pip_model_dir,
+            params.ms2rescore_model,
+            params.ms2rescore_threads,
+            params.ms2rescore_mem,
+            params.ms2rescore_chunk_size,
+            params.oktoberfest_intensity_model,
+            params.oktoberfest_irt_model,
+            params.oktoberfest_memory,
+            params.oktoberfest_to_pin_memory,
+            params.oktoberfest_forks,
+            params.percolator_threads,
+            params.percolator_mem,
+            params.outdir
+        )
     }
 }

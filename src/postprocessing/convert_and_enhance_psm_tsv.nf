@@ -8,10 +8,15 @@ workflow convert_and_enhance_psm_tsv {
     searchengine_results
     type
     searchengine
+    // runtime / configuration values passed from main.nf
+    convert_psm_tsv_mem
+    enhance_psm_tsv_mem
+    outdir
+    use_only_rank1_psms
 
     main:
     psm_utils_tsvs = convert_searchengine_to_psm_utils(searchengine_results, type)
-    enhanced_and_pins = enhance_psm_tsv(psm_utils_tsvs, searchengine)
+    enhanced_and_pins = enhance_psm_tsv(psm_utils_tsvs, searchengine, convert_psm_tsv_mem, enhance_psm_tsv_mem, outdir, use_only_rank1_psms)
     
     emit:
     psm_tsv = enhanced_and_pins.psm_tsv
@@ -28,9 +33,13 @@ workflow enhance_psm_tsv {
     take:
     psm_utils_tsvs
     searchengine
+    convert_psm_tsv_mem
+    enhance_psm_tsv_mem
+    outdir
+    use_only_rank1_psms
 
     main:
-    enhance_psms_and_create_pin = enhance_psms_and_create_pin(psm_utils_tsvs, searchengine)
+    enhance_psms_and_create_pin = enhance_psms_and_create_pin(psm_utils_tsvs, searchengine, convert_psm_tsv_mem, enhance_psm_tsv_mem, outdir, use_only_rank1_psms)
 
     emit:
     psm_tsv = enhance_psms_and_create_pin.psm_tsv
@@ -42,7 +51,7 @@ workflow enhance_psm_tsv {
  */
 process convert_searchengine_to_psm_utils {
     cpus 2
-    memory { params.convert_psm_tsv_mem }
+    memory { convert_psm_tsv_mem }
 
     label 'python_image'
 
@@ -61,7 +70,7 @@ process convert_searchengine_to_psm_utils {
 
 process convert_chunked_result_to_psm_utils {
     cpus 2
-    memory { params.convert_psm_tsv_mem }
+    memory { convert_psm_tsv_mem }
 
     label 'python_image'
 
@@ -87,15 +96,19 @@ process convert_chunked_result_to_psm_utils {
  */
 process enhance_psms_and_create_pin {
     cpus 2
-    memory { params.enhance_psm_tsv_mem }
+    memory { enhance_psm_tsv_mem }
 
     label 'python_image'
 
-	publishDir "${params.outdir}/${searchengine}", mode: 'copy'
+    publishDir "${outdir}/${searchengine}", mode: 'copy'
 
     input:
     path psm_utils_tsv
     val searchengine
+    val convert_psm_tsv_mem
+    val enhance_psm_tsv_mem
+    val outdir
+    val use_only_rank1_psms
 
     output:
     path "${psm_utils_tsv.baseName}.enhanced.tsv", emit: psm_tsv
@@ -104,7 +117,7 @@ process enhance_psms_and_create_pin {
     script:
     """
     adjust_psm_list.py -in_file ${psm_utils_tsv} -out_file ${psm_utils_tsv.baseName}.adjusted.tsv -searchengine ${searchengine}
-    psms_to_pin_and_enhancedTSV.py -in_file ${psm_utils_tsv.baseName}.adjusted.tsv -out_file ${psm_utils_tsv.baseName}.enhanced.tsv -out_pin  ${psm_utils_tsv.baseName}.pre.pin -use_only_rank1_psms ${params.use_only_rank1_psms} -searchengine ${searchengine}
+    psms_to_pin_and_enhancedTSV.py -in_file ${psm_utils_tsv.baseName}.adjusted.tsv -out_file ${psm_utils_tsv.baseName}.enhanced.tsv -out_pin  ${psm_utils_tsv.baseName}.pre.pin -use_only_rank1_psms ${use_only_rank1_psms} -searchengine ${searchengine}
 
     # correct the PIN file by moving the scan number to third column and adding correct SpecId (increasing integer)
     awk '{FS="\t";OFS="\t"; if (NR>1) { \$3=\$1; \$1=NR-1; gsub(".*=", "", \$3) } print}' ${psm_utils_tsv.baseName}.pre.pin > ${psm_utils_tsv.baseName}.pin

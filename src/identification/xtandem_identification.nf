@@ -13,6 +13,27 @@ workflow xtandem_identification {
     mzmls
     precursor_tol_ppm
     fragment_tol_da
+    // xtandem-specific runtime/configuration values passed from main.nf
+    xtandem_spectrum_id_pattern
+    xtandem_scan_id_pattern
+    xtandem_threads
+    xtandem_mem
+    convert_psm_tsv_mem
+    enhance_psm_tsv_mem
+    use_only_rank1_psms
+    ms2pip_model_dir
+    ms2rescore_model
+    ms2rescore_threads
+    ms2rescore_mem
+    ms2rescore_chunk_size
+    oktoberfest_intensity_model
+    oktoberfest_irt_model
+    oktoberfest_memory
+    oktoberfest_to_pin_memory
+    oktoberfest_forks
+    percolator_threads
+    percolator_mem
+    outdir
 
     main:
     (xtandem_param_files, taxonomy_file) = create_xtandem_params_files_from_default(xtandem_config_file, fasta, mzmls, precursor_tol_ppm, fragment_tol_da)
@@ -21,19 +42,19 @@ workflow xtandem_identification {
     tandem_xmls = identification_with_xtandem(xtandem_param_files, taxonomy_file, fasta, mzmls.collect())
     tandem_xmls = tandem_xmls.flatten()
 
-    psm_tsvs_and_pin = convert_and_enhance_psm_tsv(tandem_xmls, 'xtandem', 'xtandem')
+    psm_tsvs_and_pin = convert_and_enhance_psm_tsv(tandem_xmls, 'xtandem', 'xtandem', convert_psm_tsv_mem, enhance_psm_tsv_mem, outdir, use_only_rank1_psms)
     psm_tsvs = psm_tsvs_and_pin.psm_tsv
     pin_files = psm_tsvs_and_pin.pin_file
 
-    psm_percolator(pin_files, 'xtandem')
+    psm_percolator(pin_files, 'xtandem', percolator_threads, percolator_mem, outdir)
 
     psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.xtandem_identification')) + '.mzML'  ] }
-    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.xtandem_spectrum_id_pattern, 'xtandem')
-    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.xtandem_scan_id_pattern, 'xtandem')
+    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), xtandem_spectrum_id_pattern, 'xtandem', ms2pip_model_dir, ms2rescore_model, ms2rescore_threads, ms2rescore_mem, ms2rescore_chunk_size, outdir)
+    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), xtandem_scan_id_pattern, 'xtandem', fragment_tol_da, oktoberfest_intensity_model, oktoberfest_irt_model, oktoberfest_memory, oktoberfest_to_pin_memory, oktoberfest_forks, outdir)
 
     // perform percolation
-    ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'xtandem')
-    oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'xtandem')
+    ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'xtandem', percolator_threads, percolator_mem, outdir)
+    oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'xtandem', percolator_threads, percolator_mem, outdir)
 }
 
 /**
@@ -87,7 +108,7 @@ process create_xtandem_params_files_from_default {
     sed -i 's;<note type="input" label="spectrum, parent monoisotopic mass error plus">[^<]*</note>;<note type="input" label="spectrum, parent monoisotopic mass error plus">${precursor_tol_ppm}</note>;' ${mzmls.baseName}.xtandem_input.xml
     sed -i 's;<note type="input" label="spectrum, parent monoisotopic mass error units">[^<]*</note>;<note type="input" label="spectrum, parent monoisotopic mass error units">ppm</note>;' ${mzmls.baseName}.xtandem_input.xml
 
-    sed -i 's;<note type="input" label="spectrum, threads">[^<]*</note>;<note type="input" label="spectrum, threads">${params.xtandem_threads}</note>;' ${mzmls.baseName}.xtandem_input.xml
+    sed -i 's;<note type="input" label="spectrum, threads">[^<]*</note>;<note type="input" label="spectrum, threads">${xtandem_threads}</note>;' ${mzmls.baseName}.xtandem_input.xml
 
     # rename absolute paths to current path, to allow for clean passing on in workflow
     workDir=\$(pwd)
@@ -103,12 +124,12 @@ process create_xtandem_params_files_from_default {
  * Performs the identifications with XTandem
  */
 process identification_with_xtandem {
-    cpus { params.xtandem_threads }
-    memory { params.xtandem_mem }
+    cpus { xtandem_threads }
+    memory { xtandem_mem }
 
     label 'xtandem_image'
     
-    publishDir "${params.outdir}/xtandem", mode: 'copy'
+    publishDir "${outdir}/xtandem", mode: 'copy'
 
     input:
     path xtandem_param_file

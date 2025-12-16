@@ -21,33 +21,54 @@ workflow msamanda_identification {
     mzmls
     precursor_tol_ppm
     fragment_tol_da
+    // msamanda-specific runtime/config values passed from main.nf
+    msamanda_threads
+    msamanda_mem
+    msamanda_spectrum_id_pattern
+    msamanda_scan_id_pattern
+    convert_psm_tsv_mem
+    enhance_psm_tsv_mem
+    use_only_rank1_psms
+    ms2pip_model_dir
+    ms2rescore_model
+    ms2rescore_threads
+    ms2rescore_mem
+    ms2rescore_chunk_size
+    oktoberfest_intensity_model
+    oktoberfest_irt_model
+    oktoberfest_memory
+    oktoberfest_to_pin_memory
+    oktoberfest_forks
+    percolator_threads
+    percolator_mem
+    outdir
 
     main:
     msamanda_results = identification_with_msamanda(msamanda_config_file, fasta, mzmls, precursor_tol_ppm, fragment_tol_da)
 
-    psm_tsvs_and_pin = convert_and_enhance_psm_tsv(msamanda_results.msamanda_csv, 'msamanda', 'msamanda')
+    psm_tsvs_and_pin = convert_and_enhance_psm_tsv(msamanda_results.msamanda_csv, 'msamanda', 'msamanda', convert_psm_tsv_mem, enhance_psm_tsv_mem, outdir, use_only_rank1_psms)
     psm_tsvs = psm_tsvs_and_pin.psm_tsv
     pin_files = psm_tsvs_and_pin.pin_file
 
-    psm_percolator(pin_files, 'msamanda')
+    psm_percolator(pin_files, 'msamanda', percolator_threads, percolator_mem, outdir)
 
     psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('_msamanda.csv')) + '.mzML'  ] }
-    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msamanda_spectrum_id_pattern, 'msamanda')
-    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msamanda_scan_id_pattern, 'msamanda')
+    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), msamanda_spectrum_id_pattern, 'msamanda', ms2pip_model_dir, ms2rescore_model, ms2rescore_threads, ms2rescore_mem, ms2rescore_chunk_size, outdir)
+    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), msamanda_scan_id_pattern, 'msamanda', fragment_tol_da, oktoberfest_intensity_model, oktoberfest_irt_model, oktoberfest_memory, oktoberfest_to_pin_memory, oktoberfest_forks, outdir)
 
     // perform percolation
-    ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'msamanda')
-    oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'msamanda')
+    ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'msamanda', percolator_threads, percolator_mem, outdir)
+    oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'msamanda', percolator_threads, percolator_mem, outdir)
 }
 
 
 process identification_with_msamanda {
-    cpus { params.msamanda_threads }
-    memory { params.msamanda_mem }
+    cpus { msamanda_threads }
+    memory { msamanda_mem }
 
     label 'msamanda_image'
 
-    publishDir "${params.outdir}/msamanda", mode: 'copy'
+    publishDir "${outdir}/msamanda", mode: 'copy'
 
     input:
     path msamanda_config_file
@@ -72,6 +93,10 @@ process identification_with_msamanda {
     # Optional: -f fileformat       choose 1 for .csv and 2 for .mzid, default value is 1
     # Optional: -o outputfilename   file or folder where the output should be saved, default path is location of Spectrum file
 
-    MSAmanda -s ${mzmls} -d ${fasta} -e adjusted_msamanda_settings.xml -f 1 -o ${mzmls.baseName}_msamanda.csv
+    # create a short-name symlink or copy for the FASTA to work around MSAmanda's filename length limit (must be < 80 chars)
+    if [ -e db.fasta ]; then rm -f db.fasta; fi
+    ln -s "${fasta}" db.fasta || cp "${fasta}" db.fasta
+
+    MSAmanda -s ${mzmls} -d db.fasta -e adjusted_msamanda_settings.xml -f 1 -o ${mzmls.baseName}_msamanda.csv
     """
 }

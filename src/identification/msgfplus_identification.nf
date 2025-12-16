@@ -16,16 +16,43 @@ workflow msgfplus_identification {
     fasta
     mzmls
     precursor_tol_ppm
+    // msgfplus-specific runtime/configuration values passed from main.nf
+    msgfplus_split_fasta
+    msgfplus_split_input
+    msgfplus_spectrum_id_pattern
+    msgfplus_scan_id_pattern
+    msgfplus_threads
+    msgfplus_mem_gb
+    msgfplus_instrument
+    msgfplus_tasks
+    msgfplus_merge_mem_gb
+    msgfplus_mzid_mem_gb
+    convert_psm_tsv_mem
+    enhance_psm_tsv_mem
+    use_only_rank1_psms
+    ms2pip_model_dir
+    ms2rescore_model
+    ms2rescore_threads
+    ms2rescore_mem
+    ms2rescore_chunk_size
+    oktoberfest_intensity_model
+    oktoberfest_irt_model
+    oktoberfest_memory
+    oktoberfest_to_pin_memory
+    oktoberfest_forks
+    percolator_threads
+    percolator_mem
+    outdir
 
     main:
-    if (params.msgfplus_split_fasta > 0) {
+    if (msgfplus_split_fasta > 0) {
         fasta = split_fasta(fasta)
         fasta = fasta.flatten()
     }
     fasta_index = build_msgfplus_index(fasta)
 
-    if (params.msgfplus_split_input > 0) {
-        chunked_mzmls = split_mzml_into_chunks(params.msgfplus_split_input, mzmls)
+    if (msgfplus_split_input > 0) {
+        chunked_mzmls = split_mzml_into_chunks(msgfplus_split_input, mzmls)
         mzmls_to_chunks = chunked_mzmls.transpose()
     } else {
         mzmls_to_chunks = mzmls.map{ it -> [it.baseName, it] }
@@ -33,9 +60,11 @@ workflow msgfplus_identification {
 
     fasta_idx_mzml_chunk_combo = fasta_index.combine(mzmls_to_chunks)
 
-    msgfplus_results = identification_with_msgfplus(msgfplus_params_file, fasta_idx_mzml_chunk_combo, precursor_tol_ppm, (params.msgfplus_split_fasta == 0))
+    // publish_results is true when we did not split fasta (single output per mzML)
+    publish_results = (msgfplus_split_fasta == 0)
+    msgfplus_results = identification_with_msgfplus(msgfplus_params_file, fasta_idx_mzml_chunk_combo, precursor_tol_ppm, publish_results)
 
-    if ((params.msgfplus_split_fasta > 0)) {
+    if ((msgfplus_split_fasta > 0)) {
         grouped_results = msgfplus_results.map { it ->
             tuple(
                 it[0],  // original mzml basename
@@ -58,35 +87,35 @@ workflow msgfplus_identification {
     psm_tsvs_with_mzml = convert_chunked_result_to_psm_utils(fasta_merged_results, 'mzid')
 
     grouped_results = psm_tsvs_with_mzml.groupTuple(by: 0)
-    if (params.msgfplus_split_input > 0) {
+    if (msgfplus_split_input > 0) {
         merged_results = merge_psms(grouped_results)
     } else {
         merged_results = psm_tsvs_with_mzml.map{ it -> it[1] }
     }
 
-    psm_tsvs_and_pin = enhance_psm_tsv(merged_results, 'msgfplus')
+    psm_tsvs_and_pin = enhance_psm_tsv(merged_results, 'msgfplus', convert_psm_tsv_mem, enhance_psm_tsv_mem, outdir, use_only_rank1_psms)
 
     psm_tsvs = psm_tsvs_and_pin.psm_tsv
     pin_files = psm_tsvs_and_pin.pin_file
 
-    psm_percolator(pin_files, 'msgfplus')
+    psm_percolator(pin_files, 'msgfplus', percolator_threads, percolator_mem, outdir)
 
     psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.mzid')) + '.mzML'  ] }
-    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msgfplus_spectrum_id_pattern, 'msgfplus')
-    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msgfplus_scan_id_pattern, 'msgfplus')
+    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), msgfplus_spectrum_id_pattern, 'msgfplus', ms2pip_model_dir, ms2rescore_model, ms2rescore_threads, ms2rescore_mem, ms2rescore_chunk_size, outdir)
+    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), msgfplus_scan_id_pattern, 'msgfplus', fragment_tol_da, oktoberfest_intensity_model, oktoberfest_irt_model, oktoberfest_memory, oktoberfest_to_pin_memory, oktoberfest_forks, outdir)
 
     // perform percolation
-    ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'msgfplus')
-    oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'msgfplus')
+    ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'msgfplus', percolator_threads, percolator_mem, outdir)
+    oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'msgfplus', percolator_threads, percolator_mem, outdir)
 }
 
 process identification_with_msgfplus {
-    cpus { params.msgfplus_threads }
-    memory { params.msgfplus_mem_gb + " GB" }
+    cpus { msgfplus_threads }
+    memory { msgfplus_mem_gb + " GB" }
 
     label 'msgfplus_image'
 
-    publishDir "${params.outdir}/msgfplus", mode: 'copy', enabled: { publish_results }
+    publishDir "${outdir}/msgfplus", mode: 'copy', enabled: { publish_results }
 
     input:
     path msgfplus_params_file
@@ -101,9 +130,9 @@ process identification_with_msgfplus {
     """
     cp ${msgfplus_params_file} adjusted_MSGFPlus_Params.txt
     sed -i 's;^PrecursorMassTolerance=.*;PrecursorMassTolerance=${precursor_tol_ppm};' adjusted_MSGFPlus_Params.txt
-    sed -i 's;^InstrumentID=.*;InstrumentID=${params.msgfplus_instrument};' adjusted_MSGFPlus_Params.txt
+    sed -i 's;^InstrumentID=.*;InstrumentID=${msgfplus_instrument};' adjusted_MSGFPlus_Params.txt
 
-    java -Xmx${params.msgfplus_mem_gb}G -jar /opt/msgfplus/MSGFPlus.jar -conf adjusted_MSGFPlus_Params.txt -s ${mzml} -d ${fasta} -thread ${params.msgfplus_threads} -tasks ${params.msgfplus_tasks} -o ${mzml.baseName}.mzid
+    java -Xmx${msgfplus_mem_gb}G -jar /opt/msgfplus/MSGFPlus.jar -conf adjusted_MSGFPlus_Params.txt -s ${mzml} -d ${fasta} -thread ${msgfplus_threads} -tasks ${msgfplus_tasks} -o ${mzml.baseName}.mzid
 
     if [[ ${fasta} == *"-split"* ]]; then
         splitnum=\$(echo "${fasta}" | sed "s;.*-split-\\([0-9]*\\).fasta;\\1;")
@@ -128,14 +157,14 @@ process split_fasta {
 
     script:
     """
-    split_fasta.py -in_file ${fasta} -out_file_base ${fasta.baseName}-split -splits ${params.msgfplus_split_fasta} 
+    split_fasta.py -in_file ${fasta} -out_file_base ${fasta.baseName}-split -splits ${msgfplus_split_fasta} 
     """
 }
 
 
 process build_msgfplus_index {
-    cpus { params.msgfplus_threads }
-    memory { params.msgfplus_mem_gb + " GB" }
+    cpus { msgfplus_threads }
+    memory { msgfplus_mem_gb + " GB" }
 
     label 'msgfplus_image'
 
@@ -147,14 +176,14 @@ process build_msgfplus_index {
 
     script:
     """
-    java -Xmx${params.msgfplus_mem_gb}G -cp /opt/msgfplus/MSGFPlus.jar edu.ucsd.msjava.msdbsearch.BuildSA -d ${fasta} -tda 0 -o ./ -decoy DECOY_
+    java -Xmx${msgfplus_mem_gb}G -cp /opt/msgfplus/MSGFPlus.jar edu.ucsd.msjava.msdbsearch.BuildSA -d ${fasta} -tda 0 -o ./ -decoy DECOY_
     """
 }
 
 
 process merge_psms {
     cpus 2
-    memory { params.msgfplus_merge_mem_gb + " GB" }
+    memory { msgfplus_merge_mem_gb + " GB" }
 
     label 'python_image'
 
@@ -173,11 +202,11 @@ process merge_psms {
 
 process mzid_merger {
     cpus 2
-    memory "8 GB"
+    memory { msgfplus_mzid_mem_gb + " GB" }
 
     label 'mzidmerger_image'
 
-    publishDir "${params.outdir}/msgfplus", mode: 'copy'
+    publishDir "${outdir}/msgfplus", mode: 'copy'
 
     input:
     tuple val(original_mzml_basename), val(mzml_split), path(mzid_files)

@@ -7,9 +7,12 @@ workflow psm_percolator {
     take:
     pin_files
     searchengine
+    percolator_threads
+    percolator_mem
+    outdir
 
     main:
-    pout_files = run_percolator(pin_files, searchengine)
+    pout_files = run_percolator(pin_files, searchengine, percolator_threads, percolator_mem, outdir)
 
     emit:
     pout_files
@@ -17,22 +20,25 @@ workflow psm_percolator {
 
 
 process run_percolator {
-    cpus  { params.percolator_threads }
-    memory { params.percolator_mem }
+    cpus  { percolator_threads }
+    memory { percolator_mem }
 
     label 'percolator_image'
 
-	publishDir "${params.outdir}/${searchengine}", mode: 'copy'
+    publishDir "${outdir}/${searchengine}", mode: 'copy'
 
     input:
     path pin_file
     val searchengine
+    val percolator_threads
+    val percolator_mem
+    val outdir
 
     output:
     path "${pin_file.baseName}.pout"
 
     script:
     """
-    percolator --num-threads ${params.percolator_threads} --only-psms --post-processing-tdc --search-input concatenated --results-psms ${pin_file.baseName}.pout ${pin_file} 
+    percolator --num-threads ${percolator_threads} --only-psms --post-processing-tdc --search-input concatenated --results-psms ${pin_file.baseName}.pout ${pin_file}
     """
 }

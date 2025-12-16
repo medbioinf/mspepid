@@ -9,9 +9,10 @@ workflow create_entrapment_database {
     take:
         fasta
         fold
+        fdrbench_mem_gb
 
     main:
-        entrapment_fasta = call_entrapment_database(fasta, fold, params.fdrbench_mem_gb)
+        entrapment_fasta = call_entrapment_database(fasta, fold, fdrbench_mem_gb)
         
     emit:
         entrapment_fasta
@@ -29,14 +30,14 @@ workflow create_entrapment_database {
  */
 process call_entrapment_database {
     cpus 1
-    memory "${ memory_limit }.GB"
+    memory "${ memory_limit }.GB" //fdrbench_mem_gb + " GB"
 
     label 'fdrbench_image'
 
     input: 
     path fasta
     val fold
-    val memory_limit
+    val memory_limit   //fdrbench_mem_gb + " GB"
 
     output:
     path "${fasta.baseName}-entrapment.fasta"

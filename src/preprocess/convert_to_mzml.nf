@@ -1,9 +1,14 @@
 workflow convert_to_mzml {
     take:
     input_path
+    // runtime / behavior values passed from main.nf
+    is_timstof
+    keep_mzmls
+    tdf2mzml_threads
+    outdir
 
     main:
-    if (params.is_timstof) {
+    if (is_timstof) {
         mzml_direct_convert = convert_bruker_d(input_path)
         mzml = adjust_mzML(mzml_direct_convert)
     } else {
@@ -20,7 +25,7 @@ process convert_thermo_raw {
 
     label 'msconvert_image'
 
-	publishDir "${params.outdir}/mzmls", mode: 'copy', enabled: params.keep_mzmls
+    publishDir "${outdir}/mzmls", mode: 'copy', enabled: { keep_mzmls }
 
     input:
     path input_raw
@@ -35,7 +40,7 @@ process convert_thermo_raw {
 }
 
 process convert_bruker_d {
-    cpus { params.tdf2mzml_threads }
+    cpus { tdf2mzml_threads }
     memory "8 GB"
     
     label 'tdf2mzml_image'
@@ -48,9 +53,9 @@ process convert_bruker_d {
 
     script:
     """
-    export MKL_NUM_THREADS=${params.tdf2mzml_threads}
-    export NUMEXPR_NUM_THREADS=${params.tdf2mzml_threads}
-    export OMP_NUM_THREADS=${params.tdf2mzml_threads}
+    export MKL_NUM_THREADS=${tdf2mzml_threads}
+    export NUMEXPR_NUM_THREADS=${tdf2mzml_threads}
+    export OMP_NUM_THREADS=${tdf2mzml_threads}
 
     tdf2mzml -i ${input_d} --compression "zlib" -o ${input_d.baseName}.mzML
     """
@@ -62,7 +67,7 @@ process adjust_mzML {
 
     label 'msconvert_image'
 
-	publishDir "${params.outdir}/mzmls", mode: 'copy', enabled: params.keep_mzmls
+    publishDir "${outdir}/mzmls", mode: 'copy', enabled: { keep_mzmls }
 
     input:
     path input_mzML
