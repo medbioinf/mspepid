@@ -1,5 +1,5 @@
 docker-imgs:
-	docker pull ghcr.io/medbioinf/pipeline-of-identification:latest
+	docker pull ghcr.io/medbioinf/mspepid:latest
 	
 	docker pull proteowizard/pwiz-skyline-i-agree-to-the-vendor-licenses:3.0.25073-842baef
 	docker pull quay.io/medbioinf/tdf2mzml:0.4
