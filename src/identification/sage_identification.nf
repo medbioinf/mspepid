@@ -15,6 +15,9 @@ workflow sage_identification {
     mzmls
     precursor_tol_ppm
     fragment_tol_da
+    execute_percolator
+    execute_ms2rescore_percolator
+    execute_oktoberfest_percolator
 
     main:
     sage_config_file = adjust_sage_config(default_config_file, precursor_tol_ppm, fragment_tol_da)
@@ -23,19 +26,33 @@ workflow sage_identification {
     sage_results = identification_with_sage(sage_config_file, fasta, mzmls.collect())
     separated_results = separate_sage_results(sage_results.sage_tsv)
 
-    psm_tsvs_and_pin = convert_and_enhance_psm_tsv(separated_results.sage_tsv.flatten(), 'sage_tsv', 'sage')
-    psm_tsvs = psm_tsvs_and_pin.psm_tsv
-    pin_files = psm_tsvs_and_pin.pin_file
+    if(execute_percolator){
+        psm_tsvs_and_pin = convert_and_enhance_psm_tsv(separated_results.sage_tsv.flatten(), 'sage_tsv', 'sage')
+        pin_files = psm_tsvs_and_pin.pin_file
 
-    psm_percolator(pin_files, 'sage')
+        // perform percolation
+        psm_percolator(pin_files, 'sage')
+    }
 
-    psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.sage')) ] }
-    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.sage_spectrum_id_pattern, 'sage')
-    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.sage_scan_id_pattern, 'sage')
+    if(execute_ms2rescore_percolator){
+        psm_tsvs_and_pin = convert_and_enhance_psm_tsv(separated_results.sage_tsv.flatten(), 'sage_tsv', 'sage')
+        psm_tsvs = psm_tsvs_and_pin.psm_tsv
+        psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.sage')) ] }
+        ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.sage_spectrum_id_pattern, 'sage')
 
-    // perform percolation
-    ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'sage')
-    oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'sage')
+        // perform percolation
+        ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'sage')
+    }
+
+    if(execute_oktoberfest_percolator){
+        psm_tsvs_and_pin = convert_and_enhance_psm_tsv(separated_results.sage_tsv.flatten(), 'sage_tsv', 'sage')
+        psm_tsvs = psm_tsvs_and_pin.psm_tsv
+        psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.sage')) ] }
+        oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.sage_scan_id_pattern, 'sage')
+        
+        // perform percolation
+        oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'sage')
+    }
 }
 
 

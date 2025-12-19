@@ -21,23 +21,41 @@ workflow msamanda_identification {
     mzmls
     precursor_tol_ppm
     fragment_tol_da
+    execute_percolator
+    execute_ms2rescore_percolator
+    execute_oktoberfest_percolator
 
     main:
     msamanda_results = identification_with_msamanda(msamanda_config_file, fasta, mzmls, precursor_tol_ppm, fragment_tol_da)
 
-    psm_tsvs_and_pin = convert_and_enhance_psm_tsv(msamanda_results.msamanda_csv, 'msamanda', 'msamanda')
-    psm_tsvs = psm_tsvs_and_pin.psm_tsv
-    pin_files = psm_tsvs_and_pin.pin_file
+    if(execute_percolator){
+        psm_tsvs_and_pin = convert_and_enhance_psm_tsv(msamanda_results.msamanda_csv, 'msamanda', 'msamanda')
+        pin_files = psm_tsvs_and_pin.pin_file
 
-    psm_percolator(pin_files, 'msamanda')
+        // perform percolation
+        psm_percolator(pin_files, 'msamanda')
+    }
 
-    psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('_msamanda.csv')) + '.mzML'  ] }
-    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msamanda_spectrum_id_pattern, 'msamanda')
-    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msamanda_scan_id_pattern, 'msamanda')
+    if(execute_ms2rescore_percolator){
+        psm_tsvs_and_pin = convert_and_enhance_psm_tsv(msamanda_results.msamanda_csv, 'msamanda', 'msamanda')
+        psm_tsvs = psm_tsvs_and_pin.psm_tsv
+        psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('_msamanda.csv')) + '.mzML'  ] }
+        ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msamanda_spectrum_id_pattern, 'msamanda')
 
-    // perform percolation
-    ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'msamanda')
-    oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'msamanda')
+        // perform percolation
+        ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'msamanda')
+    }
+
+    if(execute_oktoberfest_percolator){
+        psm_tsvs_and_pin = convert_and_enhance_psm_tsv(msamanda_results.msamanda_csv, 'msamanda', 'msamanda')
+        psm_tsvs = psm_tsvs_and_pin.psm_tsv
+        psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('_msamanda.csv')) + '.mzML'  ] }
+        oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msamanda_scan_id_pattern, 'msamanda')
+        
+        // perform percolation
+        oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'msamanda')
+    }
+    
 }
 
 

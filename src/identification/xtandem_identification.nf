@@ -13,6 +13,9 @@ workflow xtandem_identification {
     mzmls
     precursor_tol_ppm
     fragment_tol_da
+    execute_percolator
+    execute_ms2rescore_percolator
+    execute_oktoberfest_percolator
 
     main:
     (xtandem_param_files, taxonomy_file) = create_xtandem_params_files_from_default(xtandem_config_file, fasta, mzmls, precursor_tol_ppm, fragment_tol_da)
@@ -21,19 +24,33 @@ workflow xtandem_identification {
     tandem_xmls = identification_with_xtandem(xtandem_param_files, taxonomy_file, fasta, mzmls.collect())
     tandem_xmls = tandem_xmls.flatten()
 
-    psm_tsvs_and_pin = convert_and_enhance_psm_tsv(tandem_xmls, 'xtandem', 'xtandem')
-    psm_tsvs = psm_tsvs_and_pin.psm_tsv
-    pin_files = psm_tsvs_and_pin.pin_file
+    if(execute_percolator){
+        psm_tsvs_and_pin = convert_and_enhance_psm_tsv(tandem_xmls, 'xtandem', 'xtandem')
+        pin_files = psm_tsvs_and_pin.pin_file
 
-    psm_percolator(pin_files, 'xtandem')
+        // perform percolation
+        psm_percolator(pin_files, 'xtandem')
+    }
 
-    psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.xtandem_identification')) + '.mzML'  ] }
-    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.xtandem_spectrum_id_pattern, 'xtandem')
-    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.xtandem_scan_id_pattern, 'xtandem')
+    if(execute_ms2rescore_percolator){
+        psm_tsvs_and_pin = convert_and_enhance_psm_tsv(tandem_xmls, 'xtandem', 'xtandem')
+        psm_tsvs = psm_tsvs_and_pin.psm_tsv
+        psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.xtandem_identification')) + '.mzML'  ] }
+        ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.xtandem_spectrum_id_pattern, 'xtandem')
 
-    // perform percolation
-    ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'xtandem')
-    oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'xtandem')
+        // perform percolation
+        ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'xtandem')
+    }
+
+    if(execute_oktoberfest_percolator){
+        psm_tsvs_and_pin = convert_and_enhance_psm_tsv(tandem_xmls, 'xtandem', 'xtandem')
+        psm_tsvs = psm_tsvs_and_pin.psm_tsv
+        psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.xtandem_identification')) + '.mzML'  ] }
+        oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.xtandem_scan_id_pattern, 'xtandem')
+        
+        // perform percolation
+        oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'xtandem')
+    }
 }
 
 /**

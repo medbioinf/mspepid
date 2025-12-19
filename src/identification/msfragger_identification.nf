@@ -10,26 +10,43 @@ workflow msfragger_identification {
     mzmls
     precursor_tol_ppm
     fragment_tol_da
+    execute_percolator
+    execute_ms2rescore_percolator
+    execute_oktoberfest_percolator
 
     main:
     fragger_params_file = adjust_msfragger_param_file(default_params_file, precursor_tol_ppm, fragment_tol_da, fasta)
     
     fragger_results = identification_with_msfragger(fasta, mzmls, fragger_params_file)
     fragger_results_pepxml = fragger_results.pepxml.flatten()
-    
-    psm_tsvs_and_pin = convert_and_enhance_psm_tsv(fragger_results_pepxml, 'pepxml', 'msfragger')
-    psm_tsvs = psm_tsvs_and_pin.psm_tsv
-    pin_files = psm_tsvs_and_pin.pin_file
 
-    psm_percolator(pin_files, 'msfragger')
+    if(execute_percolator){
+        psm_tsvs_and_pin = convert_and_enhance_psm_tsv(fragger_results_pepxml, 'pepxml', 'msfragger')
+        pin_files = psm_tsvs_and_pin.pin_file
 
-    psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.pepXML')) + '.mzML'  ] }
-    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msfragger_spectrum_id_pattern, 'msfragger')
-    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msfragger_scan_id_pattern, 'msfragger')
-    
-    // perform percolation
-    ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'msfragger')
-    oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'msfragger')
+        // perform percolation
+        psm_percolator(pin_files, 'msfragger')
+    }
+
+    if(execute_ms2rescore_percolator){
+        psm_tsvs_and_pin = convert_and_enhance_psm_tsv(fragger_results_pepxml, 'pepxml', 'msfragger')
+        psm_tsvs = psm_tsvs_and_pin.psm_tsv
+        psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.pepXML')) + '.mzML'  ] }
+        ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msfragger_spectrum_id_pattern, 'msfragger')
+
+        // perform percolation
+        ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'msfragger')
+    }
+
+    if(execute_oktoberfest_percolator){
+        psm_tsvs_and_pin = convert_and_enhance_psm_tsv(fragger_results_pepxml, 'pepxml', 'msfragger')
+        psm_tsvs = psm_tsvs_and_pin.psm_tsv
+        psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.pepXML')) + '.mzML'  ] }
+        oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msfragger_scan_id_pattern, 'msfragger')
+        
+        // perform percolation
+        oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'msfragger')
+    }
 }
 
 

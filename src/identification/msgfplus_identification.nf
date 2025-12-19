@@ -16,6 +16,9 @@ workflow msgfplus_identification {
     fasta
     mzmls
     precursor_tol_ppm
+    execute_percolator
+    execute_ms2rescore_percolator
+    execute_oktoberfest_percolator
 
     main:
     if (params.msgfplus_split_fasta > 0) {
@@ -64,20 +67,33 @@ workflow msgfplus_identification {
         merged_results = psm_tsvs_with_mzml.map{ it -> it[1] }
     }
 
-    psm_tsvs_and_pin = enhance_psm_tsv(merged_results, 'msgfplus')
+    if(execute_percolator){
+        psm_tsvs_and_pin = enhance_psm_tsv(merged_results, 'msgfplus')
+        pin_files = psm_tsvs_and_pin.pin_file
 
-    psm_tsvs = psm_tsvs_and_pin.psm_tsv
-    pin_files = psm_tsvs_and_pin.pin_file
+        // perform percolation
+        psm_percolator(pin_files, 'msgfplus')
+    }
 
-    psm_percolator(pin_files, 'msgfplus')
+    if(execute_ms2rescore_percolator){
+        psm_tsvs_and_pin = enhance_psm_tsv(merged_results, 'msgfplus')
+        psm_tsvs = psm_tsvs_and_pin.psm_tsv
+        psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.mzid')) + '.mzML'  ] }
+        ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msgfplus_spectrum_id_pattern, 'msgfplus')
 
-    psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.mzid')) + '.mzML'  ] }
-    ms2rescore_pins = ms2rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msgfplus_spectrum_id_pattern, 'msgfplus')
-    oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msgfplus_scan_id_pattern, 'msgfplus')
+        // perform percolation
+        ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'msgfplus')
+    }
 
-    // perform percolation
-    ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'msgfplus')
-    oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'msgfplus')
+    if(execute_oktoberfest_percolator){
+        psm_tsvs_and_pin = enhance_psm_tsv(merged_results, 'msgfplus')
+        psm_tsvs = psm_tsvs_and_pin.psm_tsv
+        psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.mzid')) + '.mzML'  ] }
+        oktoberfest_pins = oktoberfest_rescore_workflow(psm_tsvs_and_mzmls, psm_tsvs.collect(), mzmls.collect(), params.msgfplus_scan_id_pattern, 'msgfplus')
+        
+        // perform percolation
+        oktoberfest_percolator(oktoberfest_pins.oktoberfest_pins, 'msgfplus')
+    }
 }
 
 process identification_with_msgfplus {

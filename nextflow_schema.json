@@ -514,6 +514,21 @@
           "type": "string",
           "default": "4.GB",
           "description": "Amount of allowed memory to run Percolator"
+        },
+        "execute_percolator": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to execute Percolator for post-processing of PSMs"
+        },
+        "execute_ms2rescore_percolator": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to execute MS2Rescore with Percolator for post-processing of PSMs "
+        },
+        "execute_oktoberfest_percolator": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to execute Oktoberfest with Percolator for post-processing of PSMs"
         }
       }
     }
