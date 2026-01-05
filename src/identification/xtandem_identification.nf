@@ -14,8 +14,8 @@ workflow xtandem_identification {
     precursor_tol_ppm
     fragment_tol_da
     execute_percolator
-    execute_ms2rescore_percolator
-    execute_oktoberfest_percolator
+    execute_ms2rescore
+    execute_oktoberfest
 
     main:
     (xtandem_param_files, taxonomy_file) = create_xtandem_params_files_from_default(xtandem_config_file, fasta, mzmls, precursor_tol_ppm, fragment_tol_da)
@@ -32,7 +32,7 @@ workflow xtandem_identification {
         psm_percolator(pin_files, 'xtandem')
     }
 
-    if(execute_ms2rescore_percolator){
+    if(execute_ms2rescore){
         psm_tsvs_and_pin = convert_and_enhance_psm_tsv(tandem_xmls, 'xtandem', 'xtandem')
         psm_tsvs = psm_tsvs_and_pin.psm_tsv
         psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.xtandem_identification')) + '.mzML'  ] }
@@ -42,7 +42,7 @@ workflow xtandem_identification {
         ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'xtandem')
     }
 
-    if(execute_oktoberfest_percolator){
+    if(execute_oktoberfest){
         psm_tsvs_and_pin = convert_and_enhance_psm_tsv(tandem_xmls, 'xtandem', 'xtandem')
         psm_tsvs = psm_tsvs_and_pin.psm_tsv
         psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.xtandem_identification')) + '.mzML'  ] }

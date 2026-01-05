@@ -106,36 +106,36 @@ workflow {
     // run the search engines with post-processing
     if (params.execute_comet) {
         comet_params_file = Channel.fromPath(params.comet_params_file).first()
-        comet_identification(comet_params_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.fragment_tol_da, params.execute_percolator, params.execute_ms2rescore_percolator, params.execute_oktoberfest_percolator)
+        comet_identification(comet_params_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.fragment_tol_da, params.execute_percolator, params.execute_ms2rescore, params.execute_oktoberfest)
     }
 
     if (params.execute_maxquant) {
         maxquant_params_file = Channel.fromPath(params.maxquant_params_file).first()
-        maxquant_identification(maxquant_params_file, fasta_target, raw_files, mzmls, params.precursor_tol_ppm, params.execute_percolator, params.execute_ms2rescore_percolator, params.execute_oktoberfest_percolator)
+        maxquant_identification(maxquant_params_file, fasta_target, raw_files, mzmls, params.precursor_tol_ppm, params.execute_percolator, params.execute_ms2rescore, params.execute_oktoberfest)
     }
 
     if (params.execute_msamanda) {
         msamanda_config_file = Channel.fromPath(params.msamanda_config_file).first()
-        msamanda_identification(msamanda_config_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.fragment_tol_da, params.execute_percolator, params.execute_ms2rescore_percolator, params.execute_oktoberfest_percolator)
+        msamanda_identification(msamanda_config_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.fragment_tol_da, params.execute_percolator, params.execute_ms2rescore, params.execute_oktoberfest)
     }
 
     if (params.execute_msfragger) {
         msfragger_config_file = Channel.fromPath(params.msfragger_config_file).first()
-        msfragger_identification(msfragger_config_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.fragment_tol_da, params.execute_percolator, params.execute_ms2rescore_percolator, params.execute_oktoberfest_percolator)
+        msfragger_identification(msfragger_config_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.fragment_tol_da, params.execute_percolator, params.execute_ms2rescore, params.execute_oktoberfest)
     }
 
     if (params.execute_msgfplus) {
         msgfplus_params_file = Channel.fromPath(params.msgfplus_params_file).first()
-        msgfplus_identification(msgfplus_params_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.fragment_tol_da, params.execute_percolator, params.execute_ms2rescore_percolator, params.execute_oktoberfest_percolator)
+        msgfplus_identification(msgfplus_params_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.execute_percolator, params.execute_ms2rescore, params.execute_oktoberfest)
     }
 
     if (params.execute_sage) {
         sage_config_file = Channel.fromPath(params.sage_config_file).first()
-        sage_identification(sage_config_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.fragment_tol_da, params.execute_percolator, params.execute_ms2rescore_percolator, params.execute_oktoberfest_percolator)
+        sage_identification(sage_config_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.fragment_tol_da, params.execute_percolator, params.execute_ms2rescore, params.execute_oktoberfest)
     }
 
     if (params.execute_xtandem) {
         xtandem_config_file = Channel.fromPath(params.xtandem_config_file).first()
-        xtandem_identification(xtandem_config_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.fragment_tol_da, params.execute_percolator, params.execute_ms2rescore_percolator, params.execute_oktoberfest_percolator)
+        xtandem_identification(xtandem_config_file, fasta_target_decoy, mzmls, params.precursor_tol_ppm, params.fragment_tol_da, params.execute_percolator, params.execute_ms2rescore, params.execute_oktoberfest)
     }
 }

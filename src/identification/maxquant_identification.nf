@@ -16,8 +16,8 @@ workflow maxquant_identification {
     mzmls
     precursor_tol_ppm
     execute_percolator
-    execute_ms2rescore_percolator
-    execute_oktoberfest_percolator
+    execute_ms2rescore
+    execute_oktoberfest
 
     main:
     // for TimsTOF data, always process the .d path instead of the mzML files
@@ -59,7 +59,7 @@ workflow maxquant_identification {
     }
 
 
-    if(execute_ms2rescore_percolator){
+    if(execute_ms2rescore){
         psm_tsvs_and_pin = convert_and_enhance_psm_tsv(maxquant_results, 'msms', 'maxquant')
         psm_tsvs = psm_tsvs_and_pin.psm_tsv
 
@@ -76,7 +76,7 @@ workflow maxquant_identification {
         ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'maxquant')
     }
 
-    if(execute_oktoberfest_percolator){
+    if(execute_oktoberfest){
         psm_tsvs_and_pin = convert_and_enhance_psm_tsv(maxquant_results, 'msms', 'maxquant')
         psm_tsvs = psm_tsvs_and_pin.psm_tsv
         

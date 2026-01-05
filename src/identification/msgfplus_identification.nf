@@ -17,8 +17,8 @@ workflow msgfplus_identification {
     mzmls
     precursor_tol_ppm
     execute_percolator
-    execute_ms2rescore_percolator
-    execute_oktoberfest_percolator
+    execute_ms2rescore
+    execute_oktoberfest
 
     main:
     if (params.msgfplus_split_fasta > 0) {
@@ -75,7 +75,7 @@ workflow msgfplus_identification {
         psm_percolator(pin_files, 'msgfplus')
     }
 
-    if(execute_ms2rescore_percolator){
+    if(execute_ms2rescore){
         psm_tsvs_and_pin = enhance_psm_tsv(merged_results, 'msgfplus')
         psm_tsvs = psm_tsvs_and_pin.psm_tsv
         psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.mzid')) + '.mzML'  ] }
@@ -85,7 +85,7 @@ workflow msgfplus_identification {
         ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'msgfplus')
     }
 
-    if(execute_oktoberfest_percolator){
+    if(execute_oktoberfest){
         psm_tsvs_and_pin = enhance_psm_tsv(merged_results, 'msgfplus')
         psm_tsvs = psm_tsvs_and_pin.psm_tsv
         psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.mzid')) + '.mzML'  ] }

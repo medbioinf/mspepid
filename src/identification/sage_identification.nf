@@ -16,8 +16,8 @@ workflow sage_identification {
     precursor_tol_ppm
     fragment_tol_da
     execute_percolator
-    execute_ms2rescore_percolator
-    execute_oktoberfest_percolator
+    execute_ms2rescore
+    execute_oktoberfest
 
     main:
     sage_config_file = adjust_sage_config(default_config_file, precursor_tol_ppm, fragment_tol_da)
@@ -34,7 +34,7 @@ workflow sage_identification {
         psm_percolator(pin_files, 'sage')
     }
 
-    if(execute_ms2rescore_percolator){
+    if(execute_ms2rescore){
         psm_tsvs_and_pin = convert_and_enhance_psm_tsv(separated_results.sage_tsv.flatten(), 'sage_tsv', 'sage')
         psm_tsvs = psm_tsvs_and_pin.psm_tsv
         psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.sage')) ] }
@@ -44,7 +44,7 @@ workflow sage_identification {
         ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'sage')
     }
 
-    if(execute_oktoberfest_percolator){
+    if(execute_oktoberfest){
         psm_tsvs_and_pin = convert_and_enhance_psm_tsv(separated_results.sage_tsv.flatten(), 'sage_tsv', 'sage')
         psm_tsvs = psm_tsvs_and_pin.psm_tsv
         psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.sage')) ] }

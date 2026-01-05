@@ -11,8 +11,8 @@ workflow msfragger_identification {
     precursor_tol_ppm
     fragment_tol_da
     execute_percolator
-    execute_ms2rescore_percolator
-    execute_oktoberfest_percolator
+    execute_ms2rescore
+    execute_oktoberfest
 
     main:
     fragger_params_file = adjust_msfragger_param_file(default_params_file, precursor_tol_ppm, fragment_tol_da, fasta)
@@ -28,7 +28,7 @@ workflow msfragger_identification {
         psm_percolator(pin_files, 'msfragger')
     }
 
-    if(execute_ms2rescore_percolator){
+    if(execute_ms2rescore){
         psm_tsvs_and_pin = convert_and_enhance_psm_tsv(fragger_results_pepxml, 'pepxml', 'msfragger')
         psm_tsvs = psm_tsvs_and_pin.psm_tsv
         psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.pepXML')) + '.mzML'  ] }
@@ -38,7 +38,7 @@ workflow msfragger_identification {
         ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'msfragger')
     }
 
-    if(execute_oktoberfest_percolator){
+    if(execute_oktoberfest){
         psm_tsvs_and_pin = convert_and_enhance_psm_tsv(fragger_results_pepxml, 'pepxml', 'msfragger')
         psm_tsvs = psm_tsvs_and_pin.psm_tsv
         psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.pepXML')) + '.mzML'  ] }

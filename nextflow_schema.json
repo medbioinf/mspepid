@@ -520,12 +520,12 @@
           "default": true,
           "description": "Whether to execute Percolator for post-processing of PSMs"
         },
-        "execute_ms2rescore_percolator": {
+        "execute_ms2rescore": {
           "type": "boolean",
           "default": true,
           "description": "Whether to execute MS2Rescore with Percolator for post-processing of PSMs "
         },
-        "execute_oktoberfest_percolator": {
+        "execute_oktoberfest": {
           "type": "boolean",
           "default": true,
           "description": "Whether to execute Oktoberfest with Percolator for post-processing of PSMs"

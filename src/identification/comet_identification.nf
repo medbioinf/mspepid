@@ -14,8 +14,8 @@ workflow comet_identification {
     precursor_tol_ppm
     fragment_tol_da
     execute_percolator
-    execute_ms2rescore_percolator
-    execute_oktoberfest_percolator
+    execute_ms2rescore
+    execute_oktoberfest
 
     main:
     comet_params_file = adjust_comet_param_file(default_params_file, precursor_tol_ppm, fragment_tol_da)
@@ -31,7 +31,7 @@ workflow comet_identification {
         psm_percolator(pin_files, 'comet')
     }
 
-    if(execute_ms2rescore_percolator){
+    if(execute_ms2rescore){
         psm_tsvs_and_pin = convert_and_enhance_psm_tsv(comet_mzids, 'mzid', 'comet')
         psm_tsvs = psm_tsvs_and_pin.psm_tsv
         psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.mzid')) + '.mzML'  ] }
@@ -41,7 +41,7 @@ workflow comet_identification {
         ms2rescore_percolator(ms2rescore_pins.ms2rescore_pins, 'comet')
     }
 
-    if(execute_oktoberfest_percolator){
+    if(execute_oktoberfest){
         psm_tsvs_and_pin = convert_and_enhance_psm_tsv(comet_mzids, 'mzid', 'comet')
         psm_tsvs = psm_tsvs_and_pin.psm_tsv
         psm_tsvs_and_mzmls = psm_tsvs.map { it -> [ it.name, it.name.take(it.name.lastIndexOf('.mzid')) + '.mzML'  ] }
