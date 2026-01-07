@@ -2,7 +2,7 @@
 
 import argparse
 import logging
-import pandas as pd
+from pathlib import Path
 
 from psm_utils.io import read_file, write_file
 
@@ -16,7 +16,7 @@ def argparse_setup():
     parser.add_argument("-spectra", help="Corresponding mzML file or .d path for PSMs file", required=True, type=str)
 
     parser.add_argument("-model", help="Model for MS2PIP", default="HCD", type=str)
-    parser.add_argument("-model_dir", help="Directory to store/find MS2PIP model", default="./ms2pip-model", type=str)
+    parser.add_argument("-model_dir", help="Directory to store/find MS2PIP model", required=True, type=str)
     parser.add_argument("-ms2_tolerance", help="The MS2/fragment tolerance", default=0.02, type=float)
     parser.add_argument("-spectrum_id_pattern", help="The spectrum ID pattern to correspond PSMs to spectra", default="(.*)", type=str)
     parser.add_argument("-processes", help="Number of processes / threads to use", default=8, type=int)
@@ -31,11 +31,22 @@ if __name__ == "__main__":
     args = argparse_setup()
     logging.basicConfig(level=logging.INFO)
 
+    model = args.model
+    model_dir = Path(args.model_dir)
+
+    # Enforce the contract
+    if not model_dir.exists() or not model_dir.is_dir():
+        raise RuntimeError(
+            f"MS2PIP model directory does not exist: {model_dir}. "
+            "It must be created by the Nextflow workflow."
+        )
+
+    logging.info(f"Using MS2PIP model directory: {model_dir}")
+
+
     psm_filename = args.psms_file.name
     spectrafile = args.spectra
 
-    model = args.model
-    model_dir = args.model_dir
     ms2_tolerance = args.ms2_tolerance
     spectrum_id_pattern = args.spectrum_id_pattern #r".*scan=(\d+)$"
     processes = args.processes
@@ -54,7 +65,7 @@ if __name__ == "__main__":
         ms2_tolerance=ms2_tolerance,
         spectrum_path=spectrafile,
         spectrum_id_pattern=spectrum_id_pattern,
-        model_dir=model_dir,
+        model_dir=str(model_dir),
         processes=processes
     )
 

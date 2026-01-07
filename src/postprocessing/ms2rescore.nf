@@ -7,7 +7,14 @@ workflow ms2rescore_workflow {
     searchengine
 
     main:
-    ms2pip_model_dir = Channel.fromPath(params.ms2pip_model_dir, type: 'dir').first()
+
+    /*
+    Define ONE shared MS2PIP model directory under the workflow workDir.
+    NOTE: this is a STRING path, not a `path` input.
+    */
+
+    ms2pip_model_dir = "${workflow.workDir}/ms2pip-model"
+
     check_or_download_model(ms2pip_model_dir, params.ms2rescore_model)
 
     ms2rescore_pre_pins = run_chunked_ms2rescore(psm_tsvs_and_mzmls, psm_tsvs, mzmls, spectrum_id_pattern, params.fragment_tol_da, ms2pip_model_dir)
@@ -30,7 +37,7 @@ process run_chunked_ms2rescore {
     path mzmls
     val spectrum_id_pattern
     val fragment_tol_da
-    path ms2pip_model_dir
+    val ms2pip_model_dir
     
     output:
     path "*.ms2rescore.pin", emit: features_file
@@ -80,11 +87,13 @@ process check_or_download_model {
     label 'python_image'
 
     input:
-    path model_dir
+    val model_dir
     val ms2rescore_model
 
     script:
     """
+    mkdir -p "${model_dir}"
+
     ms2rescore_check_or_download_model.py -ms2pip_model ${ms2rescore_model} -model_dir "${model_dir}"
     """
 }
